@@ -1,0 +1,66 @@
+{
+  "common": {
+    "search": "मशीनें, ब्रांड, शहर खोजें...",
+    "retry": "पुनः प्रयास करें",
+    "edit": "संपादित करें",
+    "delete": "हटाएं",
+    "cancel": "रद्द करें",
+    "save": "सहेजें"
+  },
+  "home": {
+    "title": "हॉलमार्क हब",
+    "availableEquipment": "उपलब्ध उपकरण",
+    "noResults": "आपकी खोज के लिए कोई परिणाम नहीं मिला"
+  },
+  "categories": {
+    "all": "सभी",
+    "xrf": "एक्सआरएफ मशीनें",
+    "laser": "लेजर मार्किंग",
+    "micro": "माइक्रो बैलेंस",
+    "fireAssay": "फायर एसे उपकरण"
+  },
+  "listing": {
+    "makeOffer": "प्रस्ताव दें",
+    "chatWithSeller": "विक्रेता से चैट करें",
+    "description": "विवरण",
+    "specifications": "विशिष्टताएँ",
+    "category": "श्रेणी",
+    "brand": "ब्रांड",
+    "yearOfPurchase": "खरीद का वर्ष",
+    "condition": "स्थिति",
+    "warranty": "वारंटी",
+    "report": "इस लिस्टिंग की रिपोर्ट करें",
+    "noDescription": "इस लिस्टिंग के लिए कोई विवरण नहीं दिया गया है। अधिक जानकारी के लिए कृपया विक्रेता से संपर्क करें।"
+  },
+  "tabs": {
+    "home": "होम",
+    "myListings": "मेरी लिस्टिंग",
+    "chat": "चैट",
+    "profile": "प्रोफाइल"
+  },
+  "chat": {
+    "messages": "संदेश",
+    "search": "बातचीत खोजें...",
+    "noMessages": "अभी तक कोई संदेश नहीं",
+    "noConversations": "अभी तक कोई बातचीत नहीं",
+    "typeMessage": "एक संदेश टाइप करें..."
+  },
+  "myListings": {
+    "title": "मेरी लिस्टिंग",
+    "createNew": "नई लिस्टिंग बनाएं",
+    "active": "सक्रिय",
+    "pending": "लंबित",
+    "sold": "बिक गया",
+    "noListings": "કોઈ {{status}} लिस्टिंग नहीं मिली।"
+  },
+  "profile": {
+    "account": "खाता: {{status}}",
+    "editProfile": "प्रोफ़ाइल संपादित करें",
+    "myListings": "मेरी लिस्टिंग",
+    "language": "भाषा प्राथमिकता (EN/HI/GU)",
+    "terms": "नियम और शर्तें",
+    "support": "समर्थन कॉल करें",
+    "deleteAccount": "खाता हटाएं",
+    "logout": "लॉग आउट"
+  }
+}

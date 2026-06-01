@@ -4,14 +4,21 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from '../../types/navigation';
-import { useDataStore } from '../../store/useDataStore';
+import { useListingsStore } from '../../store/listingsStore';
+import { useChatStore } from '../../store/chatStore';
 import { Button } from '../../components/Button';
+import { Alert } from 'react-native';
 
 export const MakeOfferScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<MainStackParamList, 'MakeOffer'>>();
   const listingId = route.params?.id;
-  const listing = useDataStore(state => state.listings.find(l => l.id === listingId));
+  
+  const { activeListings, myListings } = useListingsStore();
+  const allListings = [...activeListings, ...myListings];
+  const listing = allListings.find(l => l.id === listingId);
+  const { getOrCreateChat, createOffer } = useChatStore();
+  const [loading, setLoading] = useState(false);
   
   const [offer, setOffer] = useState('');
   const [message, setMessage] = useState('');
@@ -39,7 +46,7 @@ export const MakeOfferScreen: React.FC = () => {
             <View className="flex-1">
               <Text className="text-dark font-bold mb-1" numberOfLines={1}>{listing.brand}</Text>
               <Text className="text-gray-500 text-sm mb-1">{listing.category}</Text>
-              <Text className="text-gold font-bold">Listed: ₹{listing.price.toLocaleString('en-IN')}</Text>
+              <Text className="text-gold font-bold">Listed: ₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
             </View>
           </View>
 
@@ -71,11 +78,22 @@ export const MakeOfferScreen: React.FC = () => {
 
           <Button 
             title="Send Offer" 
-            onPress={() => {
-              // Mock sending offer
-              navigation.goBack();
+            onPress={async () => {
+              if (!offer || !listing) return;
+              try {
+                setLoading(true);
+                const chatId = await getOrCreateChat(listing.userId, listing.id);
+                await createOffer(chatId, parseFloat(offer), message);
+                Alert.alert('Success', 'Your offer has been sent to the seller!');
+                navigation.goBack();
+              } catch (error: any) {
+                Alert.alert('Error', error.message || 'Failed to send offer');
+              } finally {
+                setLoading(false);
+              }
             }} 
             disabled={!offer}
+            loading={loading}
           />
         </ScrollView>
       </KeyboardAvoidingView>

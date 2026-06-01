@@ -4,28 +4,55 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { MainStackParamList } from '../../types/navigation';
-import { useDataStore } from '../../store/useDataStore';
+import { useChatStore } from '../../store/chatStore';
+import { useAuthStore } from '../../store/authStore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../firebase.config';
+import { useTranslation } from 'react-i18next';
 
 export const IndividualChatScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<MainStackParamList, 'IndividualChat'>>();
   const chatId = route.params?.id;
   
-  const { chats, sendMessage } = useDataStore();
+  const { chats, messages: allMessages, fetchMessages, sendMessage } = useChatStore();
+  const { user } = useAuthStore();
+  const { t } = useTranslation();
   const chat = chats.find(c => c.id === chatId);
+  const messages = allMessages[chatId] || [];
   
+  React.useEffect(() => {
+    if (chatId) {
+      const unsubscribe = fetchMessages(chatId);
+      
+      // Reset unread count if we are opening it and there are unread messages
+      if (chat && chat.unreadCount > 0 && chat.lastSenderId !== user?.uid) {
+        updateDoc(doc(db, 'chats', chatId), { unreadCount: 0 });
+      }
+      
+      return () => unsubscribe();
+    }
+  }, [chatId, fetchMessages, chat?.unreadCount]);
+
+  const [profile, setProfile] = useState<any>(null);
+  React.useEffect(() => {
+    if (!chat || !user) return;
+    const otherId = chat.participants.find(p => p !== user.uid);
+    if (otherId) {
+      getDoc(doc(db, 'users', otherId)).then(snap => {
+        if (snap.exists()) setProfile(snap.data());
+      });
+    }
+  }, [chat, user]);
+
   const [message, setMessage] = useState('');
 
-  // Use mock data if new chat
-  const chatName = chat?.buyerName || 'Contact Name';
-  const chatCompany = chat?.buyerCompany || 'Company Name';
-  const messages = chat?.messages || [
-    { id: '1', text: 'Hello, is this still available?', senderId: 'me', timestamp: '10:00 AM' }
-  ];
+  const chatName = profile?.fullName || 'User';
+  const chatCompany = profile?.companyName || 'Company';
 
   const handleSend = () => {
-    if (message.trim() && chat) {
-      sendMessage(chat.id, message.trim());
+    if (message.trim() && chatId) {
+      sendMessage(chatId, message.trim());
       setMessage('');
     }
   };
@@ -56,14 +83,14 @@ export const IndividualChatScreen: React.FC = () => {
           contentContainerStyle={{ padding: 16 }}
           inverted={false}
           renderItem={({ item }) => {
-            const isMe = item.senderId === '1' || item.senderId === 'me';
+            const isMe = item.senderId === user?.uid;
             return (
               <View className={`mb-4 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}>
                 <View className={`p-3 rounded-2xl ${isMe ? 'bg-gold rounded-br-sm' : 'bg-white rounded-bl-sm border border-gray-100'}`}>
                   <Text className={isMe ? 'text-white' : 'text-dark'}>{item.text}</Text>
                 </View>
                 <Text className={`text-[10px] text-gray-400 mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                  {item.timestamp}
+                  {item.timestamp ? new Date(item.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </Text>
               </View>
             );
@@ -75,7 +102,7 @@ export const IndividualChatScreen: React.FC = () => {
           <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-4 min-h-[44px]">
             <TextInput
               className="flex-1 text-dark py-2"
-              placeholder="Type a message..."
+              placeholder={t('chat.typeMessage')}
               placeholderTextColor="#9CA3AF"
               multiline
               value={message}

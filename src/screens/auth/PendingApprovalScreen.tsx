@@ -3,10 +3,10 @@ import { View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/Button';
-import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/authStore';
 
 export const PendingApprovalScreen: React.FC = () => {
-  const { logout, simulateApproval } = useAppStore();
+  const { logout } = useAuthStore();
 
   return (
     <SafeAreaView className="flex-1 bg-white justify-center items-center px-6">
@@ -31,15 +31,6 @@ export const PendingApprovalScreen: React.FC = () => {
           onPress={() => {}} 
           variant="outline" 
         />
-        
-        {/* Helper for mock app */}
-        <View className="mt-8 border-t border-gray-200 pt-8">
-          <Button 
-            title="[Mock] Simulate Admin Approval" 
-            onPress={simulateApproval} 
-            variant="outline" 
-          />
-        </View>
       </View>
 
       <Text 

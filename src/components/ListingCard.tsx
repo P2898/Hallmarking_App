@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Listing } from '../store/useDataStore';
 
 interface ListingCardProps {
-  listing: Listing;
+  listing: any;
   onPress: () => void;
   isMyListing?: boolean;
   onEdit?: () => void;
@@ -27,7 +26,11 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       className="bg-white rounded-xl shadow-sm mb-4 border border-gray-100 overflow-hidden"
     >
       <View className="h-48 bg-gray-200 justify-center items-center">
-        <Ionicons name="camera-outline" size={40} color="#9CA3AF" />
+        {listing.photos && listing.photos.length > 0 ? (
+          <Image source={{ uri: listing.photos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        ) : (
+          <Ionicons name="camera-outline" size={40} color="#9CA3AF" />
+        )}
       </View>
       
       <View className="p-4">
@@ -45,12 +48,12 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         </View>
 
         <Text className="text-lg font-bold text-dark mb-1">{listing.brand}</Text>
-        <Text className="text-gray-500 text-sm mb-2">{listing.year} • {listing.condition}</Text>
+        <Text className="text-gray-500 text-sm mb-2">{listing.yearOfPurchase || listing.year} • {listing.condition}</Text>
         
         <View className="flex-row justify-between items-end mt-2">
           <View>
-            <Text className="text-xl font-bold text-dark">₹{listing.price.toLocaleString('en-IN')}</Text>
-            {listing.isMakeOffer && !isMyListing && (
+            <Text className="text-xl font-bold text-dark">₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
+            {(listing.pricingType === 'negotiable' || listing.isMakeOffer) && !isMyListing && (
               <Text className="text-gold text-xs font-semibold mt-1">Make an Offer</Text>
             )}
           </View>

@@ -74,9 +74,7 @@ const MOCK_CHATS: Chat[] = [
 ];
 
 const MOCK_NOTIFICATIONS: AppNotification[] = [
-  { id: '1', type: 'chat', title: 'New Message', message: 'Rahul Verma sent you a message', timestamp: '2 hours ago', isRead: false },
-  { id: '2', type: 'offer', title: 'Offer Received', message: 'You received an offer of ₹4,00,000 for Sartorius Micro Balance', timestamp: 'Yesterday', isRead: false },
-  { id: '3', type: 'approved', title: 'Account Approved', message: 'Welcome to HallmarkHub! Your account is now active.', timestamp: '2 days ago', isRead: true },
+  { id: '1', type: 'approved', title: 'Account Approved', message: 'Welcome to HallmarkHub! Your account is now active and you can start buying and selling industrial equipment.', timestamp: 'Just now', isRead: false },
 ];
 
 export const useDataStore = create<DataState>((set) => ({

@@ -1,0 +1,66 @@
+{
+  "common": {
+    "search": "મશીનો, બ્રાન્ડ્સ, શહેરો શોધો...",
+    "retry": "ફરી પ્રયાસ કરો",
+    "edit": "ફેરફાર કરો",
+    "delete": "કાઢી નાખો",
+    "cancel": "રદ કરો",
+    "save": "સાચવો"
+  },
+  "home": {
+    "title": "હોલમાર્ક હબ",
+    "availableEquipment": "ઉપલબ્ધ સાધનો",
+    "noResults": "તમારી શોધ માટે કોઈ પરિણામ મળ્યું નથી"
+  },
+  "categories": {
+    "all": "બધા",
+    "xrf": "XRF મશીનો",
+    "laser": "લેસર માર્કિંગ",
+    "micro": "માઇક્રો બેલેન્સ",
+    "fireAssay": "ફાયર એસે સાધનો"
+  },
+  "listing": {
+    "makeOffer": "ઓફર કરો",
+    "chatWithSeller": "વેચનાર સાથે ચેટ કરો",
+    "description": "વર્ણન",
+    "specifications": "વિશિષ્ટતાઓ",
+    "category": "શ્રેણી",
+    "brand": "બ્રાન્ડ",
+    "yearOfPurchase": "ખરીદીનું વર્ષ",
+    "condition": "સ્થિતિ",
+    "warranty": "વોરંટી",
+    "report": "આ લિસ્ટિંગની જાણ કરો",
+    "noDescription": "આ લિસ્ટિંગ માટે કોઈ વર્ણન પ્રદાન કરવામાં આવ્યું નથી. વધુ વિગતો માટે કૃપા કરીને વેચનારનો સંપર્ક કરો."
+  },
+  "tabs": {
+    "home": "હોમ",
+    "myListings": "મારી લિસ્ટિંગ્સ",
+    "chat": "ચેટ",
+    "profile": "પ્રોફાઇલ"
+  },
+  "chat": {
+    "messages": "સંદેશાઓ",
+    "search": "વાતચીત શોધો...",
+    "noMessages": "હજુ સુધી કોઈ સંદેશા નથી",
+    "noConversations": "હજુ સુધી કોઈ વાતચીત નથી",
+    "typeMessage": "સંદેશ લખો..."
+  },
+  "myListings": {
+    "title": "મારી લિસ્ટિંગ્સ",
+    "createNew": "નવી લિસ્ટિંગ બનાવો",
+    "active": "સક્રિય",
+    "pending": "બાકી",
+    "sold": "વેચાઈ ગયું",
+    "noListings": "કોઈ {{status}} લિસ્ટિંગ્સ મળી નથી."
+  },
+  "profile": {
+    "account": "ખાતું: {{status}}",
+    "editProfile": "પ્રોફાઇલ સંપાદિત કરો",
+    "myListings": "મારી લિસ્ટિંગ્સ",
+    "language": "ભાષા પસંદગી (EN/HI/GU)",
+    "terms": "નિયમો અને શરતો",
+    "support": "સપોર્ટને કૉલ કરો",
+    "deleteAccount": "ખાતું કાઢી નાખો",
+    "logout": "લોગ આઉટ"
+  }
+}

@@ -8,6 +8,7 @@ export type RootStackParamList = {
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 };
 
 export type MainTabParamList = {
@@ -23,6 +24,7 @@ export type MainStackParamList = {
   MakeOffer: { id: string };
   IndividualChat: { id: string };
   CreateListing: undefined;
+  EditListing: { id: string };
   SearchFilterModal: undefined;
   Notifications: undefined;
   EditProfile: undefined;

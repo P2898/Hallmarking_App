@@ -6,20 +6,38 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthStackParamList } from '../../types/navigation';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { useAppStore } from '../../store/useAppStore';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../../../firebase.config';
+import { Alert } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
-  const login = useAppStore((state) => state.login);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (email && password) {
-      login(email);
+  const handleLogin = async () => {
+    if (!email || !password) return;
+    
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Navigation is handled by AppNavigator listening to auth state changes
+    } catch (error: any) {
+      let errorMessage = 'Login failed. Please try again.';
+      if (error.code === 'auth/wrong-password') {
+        errorMessage = 'Incorrect password. Please try again.';
+      } else if (error.code === 'auth/user-not-found') {
+        errorMessage = 'No account found with this email.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Too many attempts. Please try again later.';
+      }
+      Alert.alert('Login Error', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -52,7 +70,7 @@ export const LoginScreen: React.FC = () => {
               onChangeText={setPassword}
             />
             
-            <TouchableOpacity className="self-end mt-1">
+            <TouchableOpacity className="self-end mt-1" onPress={() => navigation.navigate('ForgotPassword')}>
               <Text className="text-gold font-semibold">Forgot Password?</Text>
             </TouchableOpacity>
           </View>
@@ -60,7 +78,8 @@ export const LoginScreen: React.FC = () => {
           <Button 
             title="Login" 
             onPress={handleLogin} 
-            disabled={!email || !password}
+            disabled={!email || !password || loading}
+            loading={loading}
           />
 
           <View className="flex-row justify-center mt-6">

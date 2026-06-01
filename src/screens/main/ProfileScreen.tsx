@@ -5,18 +5,31 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../../types/navigation';
-import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/authStore';
+import { useTranslation } from 'react-i18next';
 
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
-  const { user, logout } = useAppStore();
+  const { userProfile, logout } = useAuthStore();
+  const { t } = useTranslation();
+
+  // Map Firestore profile fields to display values
+  const user = {
+    fullName: userProfile?.fullName ?? 'User',
+    companyName: userProfile?.companyName ?? '',
+    email: userProfile?.email ?? '',
+    city: userProfile?.city ?? '',
+    state: userProfile?.state ?? '',
+    status: userProfile?.status ?? 'pending',
+    userType: userProfile?.userType ?? '',
+  };
 
   const menuItems = [
-    { title: 'Edit Profile', icon: 'person-outline', onPress: () => navigation.navigate('EditProfile') },
-    { title: 'My Listings', icon: 'list-outline', onPress: () => navigation.navigate('Tabs', { screen: 'MyListings' } as any) },
-    { title: 'Language Preference (EN/HI/GU)', icon: 'language-outline', onPress: () => {} },
-    { title: 'Terms and Conditions', icon: 'document-text-outline', onPress: () => navigation.navigate('Terms') },
-    { title: 'Call Support', icon: 'call-outline', onPress: () => {} },
+    { title: t('profile.editProfile'), icon: 'person-outline', onPress: () => navigation.navigate('EditProfile') },
+    { title: t('profile.myListings'), icon: 'list-outline', onPress: () => navigation.navigate('Tabs', { screen: 'MyListings' } as any) },
+    { title: t('profile.language'), icon: 'language-outline', onPress: () => {} },
+    { title: t('profile.terms'), icon: 'document-text-outline', onPress: () => navigation.navigate('Terms') },
+    { title: t('profile.support'), icon: 'call-outline', onPress: () => {} },
   ];
 
   return (
@@ -35,7 +48,7 @@ export const ProfileScreen: React.FC = () => {
           
           <View className={`px-3 py-1 rounded-full ${user?.status === 'approved' ? 'bg-green-100' : 'bg-amber-100'}`}>
             <Text className={`font-bold text-xs ${user?.status === 'approved' ? 'text-green-700' : 'text-amber-700'}`}>
-              Account: {user?.status?.toUpperCase()}
+              {t('profile.account').replace('{{status}}', user?.status?.toUpperCase() || '')}
             </Text>
           </View>
         </View>
@@ -62,7 +75,7 @@ export const ProfileScreen: React.FC = () => {
             onPress={() => navigation.navigate('DeleteAccount')}
           >
             <Ionicons name="trash-outline" size={22} color="#EF4444" />
-            <Text className="flex-1 ml-4 text-base font-medium text-red-500">Delete Account</Text>
+            <Text className="flex-1 ml-4 text-base font-medium text-red-500">{t('profile.deleteAccount')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
           <TouchableOpacity 
@@ -70,7 +83,7 @@ export const ProfileScreen: React.FC = () => {
             onPress={logout}
           >
             <Ionicons name="log-out-outline" size={22} color="#EF4444" />
-            <Text className="flex-1 ml-4 text-base font-medium text-red-500">Logout</Text>
+            <Text className="flex-1 ml-4 text-base font-medium text-red-500">{t('profile.logout')}</Text>
             <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
           </TouchableOpacity>
         </View>

@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { useListingsStore } from '../../store/listingsStore';
 import * as ImagePicker from 'expo-image-picker';
-import { Alert, Image } from 'react-native';
+import { MainStackParamList } from '../../types/navigation';
 
-export const CreateListingScreen: React.FC = () => {
+export const EditListingScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { createListing } = useListingsStore();
+  const route = useRoute<RouteProp<MainStackParamList, 'EditListing'>>();
+  const listingId = route.params?.id;
   
+  const { activeListings, myListings, updateListing } = useListingsStore();
+  const allListings = [...activeListings, ...myListings];
+  const listing = allListings.find(l => l.id === listingId);
+
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -30,6 +35,28 @@ export const CreateListingScreen: React.FC = () => {
     city: '',
     state: ''
   });
+
+  useEffect(() => {
+    if (listing) {
+      setFormData({
+        category: listing.category || 'XRF Machines',
+        brand: listing.brand || '',
+        year: listing.yearOfPurchase ? listing.yearOfPurchase.toString() : '',
+        yearsUsed: listing.yearsUsed ? listing.yearsUsed.toString() : '',
+        condition: listing.condition || '',
+        warranty: listing.warranty || '',
+        description: listing.description || '',
+        contactNumber: listing.contactNumber || '+91 ',
+        isMakeOffer: listing.pricingType === 'negotiable',
+        price: listing.price ? listing.price.toString() : '',
+        city: listing.city || '',
+        state: listing.state || ''
+      });
+      if (listing.photos) {
+        setPhotoUris(listing.photos);
+      }
+    }
+  }, [listing]);
 
   const CATEGORIES = ['XRF Machines', 'Laser Marking', 'Micro Balances', 'Fire Assay Equipment'];
 
@@ -51,7 +78,7 @@ export const CreateListingScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.brand || !formData.price || !formData.city || !formData.state) {
+    if (!formData.brand || (!formData.price && !formData.isMakeOffer) || !formData.city || !formData.state) {
       Alert.alert('Error', 'Please fill all required fields');
       return;
     }
@@ -62,7 +89,7 @@ export const CreateListingScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      await createListing({
+      await updateListing(listingId, {
         category: formData.category,
         brand: formData.brand,
         yearOfPurchase: parseInt(formData.year) || new Date().getFullYear(),
@@ -77,15 +104,17 @@ export const CreateListingScreen: React.FC = () => {
         state: formData.state,
       }, photoUris);
       
-      Alert.alert('Success', 'Listing submitted for review!', [
+      Alert.alert('Success', 'Listing updated successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to submit listing');
+      Alert.alert('Error', error.message || 'Failed to update listing');
     } finally {
       setLoading(false);
     }
   };
+
+  if (!listing) return null;
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -93,7 +122,7 @@ export const CreateListingScreen: React.FC = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} className="mr-4">
           <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
         </TouchableOpacity>
-        <Text className="text-xl font-bold text-dark">New Listing</Text>
+        <Text className="text-xl font-bold text-dark">Edit Listing</Text>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
@@ -252,15 +281,8 @@ export const CreateListingScreen: React.FC = () => {
             </View>
           </View>
 
-          <View className="bg-amber-50 p-4 rounded-xl mb-6 flex-row items-start">
-            <Ionicons name="information-circle" size={20} color="#D97706" className="mt-0.5 mr-2" />
-            <Text className="text-amber-700 flex-1">
-              Your listing will be reviewed by admin before going live. Please ensure all details are accurate.
-            </Text>
-          </View>
-
           <Button 
-            title="Submit Listing" 
+            title="Update Listing" 
             onPress={handleSubmit} 
             loading={loading}
           />
