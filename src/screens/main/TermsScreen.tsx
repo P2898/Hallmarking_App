@@ -22,17 +22,17 @@ export const TermsScreen: React.FC = () => {
         
         <Text className="text-dark font-bold text-lg mb-2">1. Acceptance of Terms</Text>
         <Text className="text-gray-600 mb-6 leading-6">
-          By accessing and using HallmarkHub, you accept and agree to be bound by the terms and provision of this agreement.
+          By accessing and using MachineXchange, you accept and agree to be bound by the terms and provision of this agreement.
         </Text>
 
         <Text className="text-dark font-bold text-lg mb-2">2. User Accounts</Text>
         <Text className="text-gray-600 mb-6 leading-6">
-          Users are required to create an account to access certain features. Account approval is subject to verification by HallmarkHub admins. We reserve the right to suspend or terminate accounts that violate our policies.
+          Users are required to create an account to access certain features. Account approval is subject to verification by MachineXchange admins. We reserve the right to suspend or terminate accounts that violate our policies.
         </Text>
 
         <Text className="text-dark font-bold text-lg mb-2">3. Listings and Transactions</Text>
         <Text className="text-gray-600 mb-6 leading-6">
-          HallmarkHub is a marketplace platform. We are not a party to any transactions between buyers and sellers. All listings must accurately represent the equipment being sold.
+          MachineXchange is a marketplace platform. We are not a party to any transactions between buyers and sellers. All listings must accurately represent the equipment being sold.
         </Text>
 
         <Text className="text-dark font-bold text-lg mb-2">4. Prohibited Content</Text>

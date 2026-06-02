@@ -97,7 +97,7 @@ export const RegisterScreen: React.FC = () => {
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16 }}>
           <View className="items-center mb-8 mt-4">
-            <Text className="text-3xl font-extrabold text-gold tracking-widest mb-2">HallmarkHub</Text>
+            <Text className="text-3xl font-extrabold text-gold tracking-widest mb-2">MachineXchange</Text>
             <Text className="text-2xl font-bold text-dark">Create Account</Text>
             <Text className="text-gray-500 mt-2 text-center">Join the premier marketplace</Text>
           </View>

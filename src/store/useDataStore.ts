@@ -69,12 +69,12 @@ const MOCK_LISTINGS: Listing[] = [
 ];
 
 const MOCK_CHATS: Chat[] = [
-  { id: '1', listingId: '1', buyerId: '1', sellerId: '2', buyerName: 'Mock User', buyerCompany: 'HallmarkHub Jewelry', lastMessage: 'Is the price negotiable?', timestamp: '10:30 AM', unreadCount: 0, messages: [ { id: 'm1', senderId: '1', text: 'Hi, is the price negotiable?', timestamp: '10:30 AM' } ] },
+  { id: '1', listingId: '1', buyerId: '1', sellerId: '2', buyerName: 'Mock User', buyerCompany: 'MachineXchange Jewelry', lastMessage: 'Is the price negotiable?', timestamp: '10:30 AM', unreadCount: 0, messages: [ { id: 'm1', senderId: '1', text: 'Hi, is the price negotiable?', timestamp: '10:30 AM' } ] },
   { id: '2', listingId: '3', buyerId: '4', sellerId: '1', buyerName: 'Rahul Verma', buyerCompany: 'Verma Jewellers', lastMessage: 'I can offer 4L', timestamp: 'Yesterday', unreadCount: 2, messages: [ { id: 'm1', senderId: '4', text: 'I can offer 4L', timestamp: 'Yesterday' } ] },
 ];
 
 const MOCK_NOTIFICATIONS: AppNotification[] = [
-  { id: '1', type: 'approved', title: 'Account Approved', message: 'Welcome to HallmarkHub! Your account is now active and you can start buying and selling industrial equipment.', timestamp: 'Just now', isRead: false },
+  { id: '1', type: 'approved', title: 'Account Approved', message: 'Welcome to MachineXchange! Your account is now active and you can start buying and selling industrial equipment.', timestamp: 'Just now', isRead: false },
 ];
 
 export const useDataStore = create<DataState>((set) => ({

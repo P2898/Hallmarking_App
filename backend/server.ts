@@ -16,5 +16,5 @@ app.use('/admin', adminRoutes);
 app.use('/user', userRoutes);
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log('HallmarkHub backend running');
+  console.log('MachineXchange backend running');
 });

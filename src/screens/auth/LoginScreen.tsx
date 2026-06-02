@@ -49,8 +49,8 @@ export const LoginScreen: React.FC = () => {
       >
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 16, justifyContent: 'center' }}>
           <View className="items-center mb-10">
-            <Text className="text-4xl font-extrabold text-gold tracking-widest mb-2">HallmarkHub</Text>
-            <Text className="text-2xl font-bold text-dark">Welcome to HallmarkHub</Text>
+            <Text className="text-4xl font-extrabold text-gold tracking-widest mb-2">MachineXchange</Text>
+            <Text className="text-2xl font-bold text-dark">Welcome to MachineXchange</Text>
             <Text className="text-gray-500 mt-2 text-center">Login to your account to continue</Text>
           </View>
 

@@ -11,7 +11,7 @@ export const PendingApprovalScreen: React.FC = () => {
   return (
     <SafeAreaView className="flex-1 bg-white justify-center items-center px-6">
       <View className="mb-10 items-center">
-        <Text className="text-3xl font-extrabold text-gold tracking-widest">HallmarkHub</Text>
+        <Text className="text-3xl font-extrabold text-gold tracking-widest">MachineXchange</Text>
       </View>
 
       <View className="items-center mb-8 bg-gold/10 p-6 rounded-full">
