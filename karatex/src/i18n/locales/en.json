@@ -1,0 +1,66 @@
+{
+  "common": {
+    "search": "Search machines, brands, cities...",
+    "retry": "Retry",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save"
+  },
+  "home": {
+    "title": "MachineXchange",
+    "availableEquipment": "Available Equipment",
+    "noResults": "No results found for your search"
+  },
+  "categories": {
+    "all": "All",
+    "xrf": "XRF Machines",
+    "laser": "Laser Marking",
+    "micro": "Micro Balances",
+    "fireAssay": "Fire Assay Equipment"
+  },
+  "listing": {
+    "makeOffer": "Make an Offer",
+    "chatWithSeller": "Chat with Seller",
+    "description": "Description",
+    "specifications": "Specifications",
+    "category": "Category",
+    "brand": "Brand",
+    "yearOfPurchase": "Year of Purchase",
+    "condition": "Condition",
+    "warranty": "Warranty",
+    "report": "Report this listing",
+    "noDescription": "No description provided for this listing. Please contact the seller for more details."
+  },
+  "tabs": {
+    "home": "Home",
+    "myListings": "My Listings",
+    "chat": "Chat",
+    "profile": "Profile"
+  },
+  "chat": {
+    "messages": "Messages",
+    "search": "Search conversations...",
+    "noMessages": "No messages yet",
+    "noConversations": "No conversations yet",
+    "typeMessage": "Type a message..."
+  },
+  "myListings": {
+    "title": "My Listings",
+    "createNew": "Create New Listing",
+    "active": "Active",
+    "pending": "Pending",
+    "sold": "Sold",
+    "noListings": "No {{status}} listings found."
+  },
+  "profile": {
+    "account": "Account: {{status}}",
+    "editProfile": "Edit Profile",
+    "myListings": "My Listings",
+    "language": "Language Preference (EN/HI/GU)",
+    "terms": "Terms and Conditions",
+    "support": "Call Support",
+    "deleteAccount": "Delete Account",
+    "logout": "Logout"
+  }
+}
