@@ -4,13 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../../firebase.config';
+import { useAuthStore } from '../../store/authStore';
 import { Alert } from 'react-native';
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation();
+  const register = useAuthStore((state) => state.register);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -48,51 +47,20 @@ export const RegisterScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      console.log('[Register] Step 1: Creating Firebase Auth user...');
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      console.log('[Register] Step 2: Auth user created:', userCredential.user.uid);
-      
-      console.log('[Register] Step 3: Writing user profile to Firestore...');
-      try {
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-          uid: userCredential.user.uid,
-          fullName,
-          companyName,
-          userType,
-          city,
-          state,
-          email,
-          status: 'pending',
-          fcmToken: null,
-          createdAt: serverTimestamp(),
-        });
-        console.log('[Register] Step 4: Firestore write successful!');
-      } catch (firestoreError: any) {
-        console.error('[Register] FIRESTORE WRITE FAILED:', firestoreError.message, firestoreError.code);
-        Alert.alert('Firestore Error', firestoreError.message);
-      }
-      // AppNavigator will automatically route to PendingApproval because authStatus becomes 'authenticated' and approvalStatus becomes 'pending'
+      console.log('[Register] Registration initiated...');
+      await register(formData);
+      console.log('[Register] Registration successful!');
+      Alert.alert('Success', 'Registration successful! Please log in.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     } catch (error: any) {
-      console.error('[Register] FULL ERROR:', JSON.stringify(error, null, 2));
-      console.error('[Register] Error code:', error.code);
-      console.error('[Register] Error message:', error.message);
-      if (error.code === 'auth/email-already-in-use') {
-        Alert.alert('Error', 'An account with this email already exists. Please login.');
-      } else if (error.code === 'auth/weak-password') {
-        Alert.alert('Error', 'Password must be at least 8 characters.');
-      } else if (error.code === 'auth/operation-not-allowed') {
-        Alert.alert('Firebase Setup Required', 'Email/Password sign-in is not enabled. Go to Firebase Console → Authentication → Sign-in method → Enable Email/Password.');
-      } else if (error.code === 'auth/network-request-failed') {
-        Alert.alert('Network Error', 'No internet connection. Please check your network.');
-      } else if (error.code === 'auth/invalid-api-key') {
-        Alert.alert('Config Error', 'Invalid Firebase API key. Check your .env file and restart Expo.');
-      } else {
-        Alert.alert('Registration Error', `Failed (${error.code || 'unknown'}): ${error.message || 'Please try again.'}`);
-      }
+      console.error('[Register] Error:', error.message || error);
+      Alert.alert('Registration Error', error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <SafeAreaView className="flex-1 bg-white">

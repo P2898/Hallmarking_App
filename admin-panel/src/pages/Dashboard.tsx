@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   List, 
-  ArrowUpRight
+  ArrowUpRight,
+  AlertTriangle
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -25,19 +26,23 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const { users, subscribeToUsers } = useUsersStore();
   const { listings, subscribeToListings } = useListingsStore();
-  const { getMonthlyRegs, getMonthlyListings } = useAnalyticsStore();
+  const { getMonthlyRegs, getMonthlyListings, refreshStats, getSummaryStats } = useAnalyticsStore();
 
   const monthlyRegs = getMonthlyRegs();
   const monthlyListings = getMonthlyListings();
+  const summaryStats = getSummaryStats();
 
-  // Subscribe to live Firestore streams on mount
+  // Subscribe to live Firestore streams and fetch stats on mount
   useEffect(() => {
     subscribeToUsers();
     subscribeToListings();
-  }, [subscribeToUsers, subscribeToListings]);
+    refreshStats();
+  }, [subscribeToUsers, subscribeToListings, refreshStats]);
 
-  const totalUsers = users.length;
-  const activeListings = listings.filter(l => l.status === 'approved').length;
+  // Use the accurate stats directly from the backend rather than computing locally
+  const totalUsers = summaryStats.totalUsers || users.length;
+  const activeListings = summaryStats.activeListings || listings.filter(l => l.status === 'active').length;
+  const pendingReports = summaryStats.pendingListings || 0;
 
 
   return (
@@ -75,6 +80,23 @@ export const Dashboard = () => {
           </div>
           <div className="w-12 h-12 bg-dark/10 text-dark rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
             <List size={24} />
+          </div>
+        </div>
+
+        {/* Pending Reports */}
+        <div 
+          onClick={() => navigate('/reports')}
+          className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-300 group cursor-pointer"
+        >
+          <div className="space-y-2">
+            <span className="text-sm font-medium text-gray-500">Pending Reports</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-gray-800">{pendingReports}</span>
+            </div>
+            <p className="text-xs text-gray-400">Listings awaiting review</p>
+          </div>
+          <div className="w-12 h-12 bg-red-50 text-red-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <AlertTriangle size={24} />
           </div>
         </div>
 

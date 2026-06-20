@@ -1,12 +1,15 @@
 import { create } from 'zustand';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../../firebase.config';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
 export interface AppCategory {
   id: string;
   name: string;
+  nameHi?: string | null;
+  nameGu?: string | null;
   color: string;
   order: number;
+  icon?: string | null;
 }
 
 interface CategoriesStore {
@@ -20,23 +23,42 @@ export const useCategoriesStore = create<CategoriesStore>((set) => ({
   loading: true,
 
   subscribeToCategories: () => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'categories'),
-      (snapshot) => {
-        const cats: AppCategory[] = snapshot.docs.map(d => ({
-          id: d.id,
-          name: d.data().name as string,
-          color: (d.data().color as string) || '#D4AF37',
-          order: (d.data().order as number) ?? 99,
-        })).sort((a, b) => a.order - b.order);
+    let active = true;
+    set({ loading: true });
 
-        set({ categories: cats, loading: false });
-      },
-      (error) => {
-        console.error('[Categories] Firestore error:', error.message);
-        set({ loading: false });
+    const fetchCats = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/categories`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+        const data = await response.json();
+        
+        if (active) {
+          const cats: AppCategory[] = data.map((d: any, index: number) => ({
+            id: d.id,
+            name: d.name,
+            nameHi: d.nameHi || null,
+            nameGu: d.nameGu || null,
+            color: '#D4AF37', // Default gold color
+            order: index + 1,
+            icon: d.icon,
+          }));
+          set({ categories: cats, loading: false });
+        }
+      } catch (error: any) {
+        console.error('[Categories] API error:', error.message);
+        if (active) {
+          set({ loading: false });
+        }
       }
-    );
-    return unsubscribe;
+    };
+
+    fetchCats();
+
+    // Return unsubscribe/cleanup function
+    return () => {
+      active = false;
+    };
   },
 }));

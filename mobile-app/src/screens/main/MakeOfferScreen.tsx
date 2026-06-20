@@ -45,7 +45,7 @@ export const MakeOfferScreen: React.FC = () => {
             </View>
             <View className="flex-1">
               <Text className="text-dark font-bold mb-1" numberOfLines={1}>{listing.brand}</Text>
-              <Text className="text-gray-500 text-sm mb-1">{listing.category}</Text>
+              <Text className="text-gray-500 text-sm mb-1">{typeof listing.category === 'object' ? listing.category?.name : listing.category}</Text>
               <Text className="text-gold font-bold">Listed: ₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
             </View>
           </View>

@@ -6,14 +6,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AuthStackParamList } from '../../types/navigation';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../../firebase.config';
+import { useAuthStore } from '../../store/authStore';
 import { Alert } from 'react-native';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const login = useAuthStore((state) => state.login);
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,23 +24,16 @@ export const LoginScreen: React.FC = () => {
     
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await login(email, password);
       // Navigation is handled by AppNavigator listening to auth state changes
     } catch (error: any) {
       console.error('[Login Error]:', error);
-      let errorMessage = `Login failed. Please try again.\n\nDetails: ${error.message || error.code || 'Unknown error'}`;
-      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        errorMessage = 'Incorrect email or password. Please try again.';
-      } else if (error.code === 'auth/user-not-found') {
-        errorMessage = 'No account found with this email.';
-      } else if (error.code === 'auth/too-many-requests') {
-        errorMessage = 'Too many attempts. Please try again later.';
-      }
-      Alert.alert('Login Error', errorMessage);
+      Alert.alert('Login Error', error.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <SafeAreaView className="flex-1 bg-white">

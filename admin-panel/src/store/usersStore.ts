@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import { db } from '../utils/firebase';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { useAuthStore } from './authStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface User {
   id: string;
@@ -26,49 +27,44 @@ interface UsersState {
   deleteUser: (id: string) => Promise<void>;
 }
 
-let unsubscribe: (() => void) | null = null;
-
-export const useUsersStore = create<UsersState>((set) => ({
+export const useUsersStore = create<UsersState>((set, get) => ({
   users: [],
-  loading: true,
-  subscribeToUsers: () => {
-    if (unsubscribe) return;
+  loading: false,
+  subscribeToUsers: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    
     set({ loading: true });
     
-    unsubscribe = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const usersList: User[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data();
-        const name = data.fullName || data.name || 'Unnamed';
-        const joinedDate = data.createdAt
-          ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0]
-          : new Date().toISOString().split('T')[0];
-
-        // Auto-approve any pending users so they can access the app immediately
-        if (data.status === 'pending') {
-          updateDoc(doc(db, 'users', d.id), { status: 'active' }).catch(console.error);
-        }
-
-        usersList.push({
+    try {
+      const response = await fetch(`${API_URL}/api/users`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch users');
+      const data = await response.json();
+      
+      const usersList: User[] = data.map((d: any) => {
+        const name = d.displayName || d.name || 'Unnamed';
+        return {
           id: d.id,
           name,
-          email: data.email || '',
-          phone: data.phone || data.contactNumber || '',
-          role: data.role || 'jeweller',
-          status: data.status === 'pending' ? 'active' : (data.status || 'active'),
-          city: data.city || '',
-          state: data.state || '',
-          companyName: data.companyName || data.businessName || '',
-          joinedDate,
-          profileImage: data.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-        });
+          email: d.email || '',
+          phone: d.phoneNumber || '',
+          role: d.userType || d.role || 'user',
+          status: 'active', // our backend users don't have status yet, assume active
+          city: d.city || '',
+          state: d.state || '',
+          companyName: d.companyName || '',
+          joinedDate: d.createdAt ? new Date(d.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          profileImage: d.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+        };
       });
 
       set({ users: usersList, loading: false });
-    }, (error) => {
-      console.error("Firestore users connection error:", error.message);
+    } catch (error: any) {
+      console.error("Fetch users connection error:", error.message);
       set({ users: [], loading: false });
-    });
+    }
   },
   addUser: (newUser) => set((state) => ({
     users: [
@@ -84,19 +80,22 @@ export const useUsersStore = create<UsersState>((set) => ({
     users: state.users.map((u) => u.id === id ? { ...u, ...updates } : u)
   })),
   updateUserStatus: async (id, status) => {
-    try {
-      const userRef = doc(db, 'users', id);
-      await updateDoc(userRef, { status });
-      set((state) => ({
-        users: state.users.map((u) => u.id === id ? { ...u, status } : u)
-      }));
-    } catch (error) {
-      console.error("Error updating user status:", error);
-    }
+    // MySQL users don't have a status column yet, but we can update local state
+    set((state) => ({
+      users: state.users.map((u) => u.id === id ? { ...u, status } : u)
+    }));
   },
   deleteUser: async (id) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    
     try {
-      await deleteDoc(doc(db, 'users', id));
+      const response = await fetch(`${API_URL}/api/users/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete user');
+      
       set((state) => ({
         users: state.users.filter((u) => u.id !== id)
       }));

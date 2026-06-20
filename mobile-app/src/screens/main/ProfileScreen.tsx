@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -11,11 +11,12 @@ import { useTranslation } from 'react-i18next';
 export const ProfileScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { userProfile, logout } = useAuthStore();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [langModalVisible, setLangModalVisible] = useState(false);
 
   // Map Firestore profile fields to display values
   const user = {
-    fullName: userProfile?.fullName ?? 'User',
+    fullName: userProfile?.displayName ?? userProfile?.fullName ?? 'User',
     companyName: userProfile?.companyName ?? '',
     email: userProfile?.email ?? '',
     city: userProfile?.city ?? '',
@@ -28,9 +29,8 @@ export const ProfileScreen: React.FC = () => {
     { title: t('profile.editProfile'), icon: 'person-outline', onPress: () => navigation.navigate('EditProfile') },
     { title: t('profile.myListings'), icon: 'list-outline', onPress: () => navigation.navigate('Tabs', { screen: 'MyListings' } as any) },
     { title: t('profile.buyHistory', 'Buy History'), icon: 'cart-outline', onPress: () => navigation.navigate('BuyHistory') },
-    { title: t('profile.language'), icon: 'language-outline', onPress: () => {} },
+    { title: t('profile.language', 'Language Preference'), icon: 'language-outline', onPress: () => setLangModalVisible(true) },
     { title: t('profile.terms'), icon: 'document-text-outline', onPress: () => navigation.navigate('Terms') },
-    { title: t('profile.support'), icon: 'call-outline', onPress: () => {} },
   ];
 
   return (
@@ -45,13 +45,11 @@ export const ProfileScreen: React.FC = () => {
           </View>
           <Text className="text-2xl font-bold text-dark">{user?.fullName}</Text>
           <Text className="text-gray-500 mb-2">{user?.companyName}</Text>
-          <Text className="text-gray-400 text-sm mb-3">{user?.city}, {user?.state}</Text>
-          
-          <View className={`px-3 py-1 rounded-full ${user?.status === 'approved' ? 'bg-green-100' : 'bg-amber-100'}`}>
-            <Text className={`font-bold text-xs ${user?.status === 'approved' ? 'text-green-700' : 'text-amber-700'}`}>
-              {t('profile.account').replace('{{status}}', user?.status?.toUpperCase() || '')}
+          {(user?.city || user?.state) && (
+            <Text className="text-gray-400 text-sm mb-3">
+              {[user?.city, user?.state].filter(Boolean).join(', ')}
             </Text>
-          </View>
+          )}
         </View>
 
         {/* Menu Items */}
@@ -89,6 +87,50 @@ export const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      <Modal
+        visible={langModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setLangModalVisible(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center items-center">
+          <View className="bg-white w-4/5 rounded-xl p-6">
+            <Text className="text-xl font-bold text-dark mb-4 text-center">
+              {t('profile.selectLanguage', 'Select Language')}
+            </Text>
+            
+            <TouchableOpacity 
+              className={`p-4 rounded-lg mb-2 ${i18n.language === 'en' ? 'bg-gold/20' : 'bg-gray-50'}`}
+              onPress={() => { i18n.changeLanguage('en'); setLangModalVisible(false); }}
+            >
+              <Text className={`text-center text-base ${i18n.language === 'en' ? 'text-gold font-bold' : 'text-dark'}`}>English</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              className={`p-4 rounded-lg mb-2 ${i18n.language === 'hi' ? 'bg-gold/20' : 'bg-gray-50'}`}
+              onPress={() => { i18n.changeLanguage('hi'); setLangModalVisible(false); }}
+            >
+              <Text className={`text-center text-base ${i18n.language === 'hi' ? 'text-gold font-bold' : 'text-dark'}`}>हिंदी (Hindi)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              className={`p-4 rounded-lg mb-4 ${i18n.language === 'gu' ? 'bg-gold/20' : 'bg-gray-50'}`}
+              onPress={() => { i18n.changeLanguage('gu'); setLangModalVisible(false); }}
+            >
+              <Text className={`text-center text-base ${i18n.language === 'gu' ? 'text-gold font-bold' : 'text-dark'}`}>ગુજરાતી (Gujarati)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              className="p-3 mt-2 border border-gray-300 rounded-lg"
+              onPress={() => setLangModalVisible(false)}
+            >
+              <Text className="text-center text-gray-500 font-medium">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };

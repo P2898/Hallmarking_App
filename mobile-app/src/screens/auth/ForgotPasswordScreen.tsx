@@ -4,11 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../../firebase.config';
+import { useAuthStore } from '../../store/authStore';
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation();
+  const forgotPassword = useAuthStore((state) => state.forgotPassword);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,16 +17,17 @@ export const ForgotPasswordScreen: React.FC = () => {
     
     setLoading(true);
     try {
-      await sendPasswordResetEmail(auth, email);
+      await forgotPassword(email);
       Alert.alert('Success', 'Password reset email sent. Check your inbox.', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error: any) {
-      Alert.alert('Error', 'Email not found. Please check and try again.');
+      Alert.alert('Error', error.message || 'Email not found. Please check and try again.');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <SafeAreaView className="flex-1 bg-white">

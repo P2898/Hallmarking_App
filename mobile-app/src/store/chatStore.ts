@@ -1,23 +1,42 @@
 import { create } from 'zustand';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, serverTimestamp, increment } from 'firebase/firestore';
-import { auth, db } from '../../firebase.config';
+import { io, Socket } from 'socket.io-client';
+import { useAuthStore } from './authStore';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface Message {
   id: string;
   senderId: string;
   text: string;
-  timestamp: any;
+  createdAt: string;
   read: boolean;
 }
 
 interface Chat {
   id: string;
-  participants: string[];
+  buyerId: string;
+  sellerId: string;
   listingId: string;
-  createdAt: any;
+  createdAt: string;
   lastMessage: string | null;
   unreadCount: number;
   lastSenderId?: string | null;
+  buyer?: {
+    id: string;
+    displayName: string | null;
+    photoURL: string | null;
+  };
+  seller?: {
+    id: string;
+    displayName: string | null;
+    photoURL: string | null;
+  };
+  listing?: {
+    id: string;
+    title: string;
+    price: number;
+    images: string[];
+  };
 }
 
 interface Offer {
@@ -26,7 +45,7 @@ interface Offer {
   message: string;
   status: 'pending' | 'accepted' | 'declined';
   senderId: string;
-  timestamp: any;
+  createdAt: string;
 }
 
 interface ChatStore {
@@ -34,6 +53,7 @@ interface ChatStore {
   messages: { [chatId: string]: Message[] };
   offers: { [chatId: string]: Offer[] };
   loadingChats: boolean;
+  socket: Socket | null;
   fetchChats: () => () => void;
   fetchMessages: (chatId: string) => () => void;
   fetchOffers: (chatId: string) => () => void;
@@ -48,100 +68,315 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   messages: {},
   offers: {},
   loadingChats: false,
+  socket: null,
 
   fetchChats: () => {
-    if (!auth.currentUser) return () => {};
+    const token = useAuthStore.getState().token;
+    const user = useAuthStore.getState().user;
+    if (!token || !user) return () => {};
+
     set({ loadingChats: true });
-    const q = query(collection(db, 'chats'), where('participants', 'array-contains', auth.currentUser.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Chat));
-      set({ chats, loadingChats: false });
-    });
-    return unsubscribe;
+
+    // Establish WebSocket Connection if not already connected
+    let socket = get().socket;
+    if (!socket) {
+      socket = io(API_URL, {
+        auth: { token },
+      });
+      set({ socket });
+
+      socket.on('connect', () => {
+        console.log('[Socket] Connected, joining user room:', user.id);
+        socket?.emit('joinUser', user.id);
+      });
+
+      socket.on('chatUpdate', (updatedChat: Chat) => {
+        set((state) => {
+          const filtered = state.chats.filter((c) => c.id !== updatedChat.id);
+          return { chats: [updatedChat, ...filtered] };
+        });
+      });
+    }
+
+    const fetchAllChats = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/chats`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const chatsData = await response.json();
+          set({ chats: chatsData, loadingChats: false });
+        }
+      } catch (error) {
+        console.error('[ChatStore] Failed to fetch chats:', error);
+        set({ loadingChats: false });
+      }
+    };
+
+    fetchAllChats();
+
+    return () => {
+      // Keep socket alive for real-time notifications in background, but clean up state listener references if required
+    };
   },
 
   fetchMessages: (chatId) => {
-    const q = query(collection(db, `chats/${chatId}/messages`));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-      set((state) => ({
-        messages: { ...state.messages, [chatId]: msgs.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0)) }
-      }));
-    });
-    return unsubscribe;
+    const token = useAuthStore.getState().token;
+    if (!token) return () => {};
+
+    const socket = get().socket;
+    if (socket) {
+      socket.emit('joinChat', chatId);
+      
+      // Listen for new messages
+      socket.on('message', (message: Message) => {
+        set((state) => {
+          const currentMsgs = state.messages[chatId] || [];
+          // Avoid duplicate messages
+          if (currentMsgs.some((m) => m.id === message.id)) return state;
+          return {
+            messages: {
+              ...state.messages,
+              [chatId]: [...currentMsgs, message].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+            },
+          };
+        });
+      });
+    }
+
+    const loadMessages = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/chats/${chatId}/messages`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const msgs = await response.json();
+          set((state) => {
+            const userId = useAuthStore.getState().user?.id;
+            const updatedChats = state.chats.map(c => {
+              if (c.id === chatId && c.lastSenderId !== userId) {
+                return { ...c, unreadCount: 0 };
+              }
+              return c;
+            });
+            
+            return {
+              messages: { ...state.messages, [chatId]: msgs },
+              chats: updatedChats
+            };
+          });
+        }
+      } catch (error) {
+        console.error('[ChatStore] Fetch messages failed:', error);
+      }
+    };
+
+    loadMessages();
+
+    return () => {
+      if (socket) {
+        socket.off('message');
+      }
+    };
   },
 
   fetchOffers: (chatId) => {
-    const q = query(collection(db, `chats/${chatId}/offers`));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const offs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Offer));
-      set((state) => ({
-        offers: { ...state.offers, [chatId]: offs.sort((a, b) => (a.timestamp?.toMillis() || 0) - (b.timestamp?.toMillis() || 0)) }
-      }));
-    });
-    return unsubscribe;
+    const token = useAuthStore.getState().token;
+    if (!token) return () => {};
+
+    const socket = get().socket;
+    if (socket) {
+      socket.on('offer', (offer: Offer) => {
+        set((state) => {
+          const currentOffers = state.offers[chatId] || [];
+          if (currentOffers.some((o) => o.id === offer.id)) return state;
+          return {
+            offers: {
+              ...state.offers,
+              [chatId]: [...currentOffers, offer].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+            },
+          };
+        });
+      });
+
+      socket.on('offerStatusUpdate', (updatedOffer: Offer) => {
+        set((state) => {
+          const currentOffers = state.offers[chatId] || [];
+          const mapped = currentOffers.map((o) => (o.id === updatedOffer.id ? updatedOffer : o));
+          return {
+            offers: {
+              ...state.offers,
+              [chatId]: mapped,
+            },
+          };
+        });
+      });
+    }
+
+    const loadOffers = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/chats/${chatId}/offers`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const offs = await response.json();
+          set((state) => ({
+            offers: { ...state.offers, [chatId]: offs },
+          }));
+        }
+      } catch (error) {
+        console.error('[ChatStore] Fetch offers failed:', error);
+      }
+    };
+
+    loadOffers();
+
+    return () => {
+      if (socket) {
+        socket.off('offer');
+        socket.off('offerStatusUpdate');
+      }
+    };
   },
 
   sendMessage: async (chatId, text) => {
-    if (!auth.currentUser) return;
-    await addDoc(collection(db, `chats/${chatId}/messages`), {
-      senderId: auth.currentUser.uid,
-      text,
-      timestamp: serverTimestamp(),
-      read: false,
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    const response = await fetch(`${API_URL}/api/chats/${chatId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ text }),
     });
-    // Update last message in chat document
-    await updateDoc(doc(db, 'chats', chatId), {
-      lastMessage: text,
-      timestamp: serverTimestamp(),
-      lastSenderId: auth.currentUser.uid,
-      unreadCount: increment(1)
+
+    if (!response.ok) {
+      throw new Error('Failed to send message');
+    }
+
+    const message = await response.json();
+
+    // Optimistically update local message state if not received by socket yet
+    set((state) => {
+      const currentMsgs = state.messages[chatId] || [];
+      if (currentMsgs.some((m) => m.id === message.id)) return state;
+      return {
+        messages: {
+          ...state.messages,
+          [chatId]: [...currentMsgs, message].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+        },
+      };
     });
   },
 
   createOffer: async (chatId, amount, message) => {
-    if (!auth.currentUser) return;
-    await addDoc(collection(db, `chats/${chatId}/offers`), {
-      amount,
-      message,
-      status: 'pending',
-      senderId: auth.currentUser.uid,
-      timestamp: serverTimestamp(),
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    const response = await fetch(`${API_URL}/api/chats/${chatId}/offers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ amount, message }),
     });
+
+    if (!response.ok) {
+      throw new Error('Failed to make offer');
+    }
+
+    const offer = await response.json();
 
     // Automatically send a chat message so the seller sees the offer in the chat room
     const textMessage = `🔔 I made an offer of ₹${amount.toLocaleString('en-IN')}${message ? `\n\nNote: ${message}` : ''}`;
     await get().sendMessage(chatId, textMessage);
+
+    // Optimistically update offer list
+    set((state) => {
+      const currentOffers = state.offers[chatId] || [];
+      if (currentOffers.some((o) => o.id === offer.id)) return state;
+      return {
+        offers: {
+          ...state.offers,
+          [chatId]: [...currentOffers, offer].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+        },
+      };
+    });
   },
 
   updateOfferStatus: async (chatId, offerId, status) => {
-    await updateDoc(doc(db, `chats/${chatId}/offers`, offerId), { status });
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    const response = await fetch(`${API_URL}/api/chats/${chatId}/offers/${offerId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update offer status');
+    }
+
+    const updatedOffer = await response.json();
+
+    // Optimistically update locally
+    set((state) => {
+      const currentOffers = state.offers[chatId] || [];
+      const mapped = currentOffers.map((o) => (o.id === updatedOffer.id ? updatedOffer : o));
+      return {
+        offers: {
+          ...state.offers,
+          [chatId]: mapped,
+        },
+      };
+    });
+
+    // Send a message informing status change
+    const actionText = status === 'accepted' ? 'accepted' : 'declined';
+    const notificationText = `🔔 I ${actionText} the offer of ₹${updatedOffer.amount.toLocaleString('en-IN')}`;
+    await get().sendMessage(chatId, notificationText);
   },
 
   getOrCreateChat: async (sellerId, listingId) => {
-    if (!auth.currentUser) throw new Error('Not authenticated');
-    
-    // First, try to find an existing chat with this seller (ignore listingId)
-    const { chats } = get();
-    const existingChat = chats.find(c => 
-      c.participants.includes(sellerId) && 
-      c.participants.includes(auth.currentUser!.uid)
-    );
-    
-    if (existingChat) {
-      return existingChat.id;
+    const token = useAuthStore.getState().token;
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${API_URL}/api/chats`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ sellerId, listingId }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to open chat');
     }
 
-    // Create a new one
-    const newChatRef = await addDoc(collection(db, 'chats'), {
-      participants: [auth.currentUser.uid, sellerId],
-      listingId,
-      createdAt: serverTimestamp(),
-      lastMessage: null,
-      unreadCount: 0,
-      lastSenderId: null,
-    });
+    const chat = await response.json();
     
-    return newChatRef.id;
-  }
+    // Add to chats array if not present
+    set((state) => {
+      const exists = state.chats.some((c) => c.id === chat.id);
+      if (exists) return state;
+      return { chats: [chat, ...state.chats] };
+    });
+
+    return chat.id;
+  },
 }));

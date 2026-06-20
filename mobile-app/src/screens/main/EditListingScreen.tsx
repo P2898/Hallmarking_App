@@ -40,13 +40,14 @@ export const EditListingScreen: React.FC = () => {
     isMakeOffer: false,
     price: '',
     city: '',
-    state: ''
+    state: '',
+    country: ''
   });
 
   useEffect(() => {
     if (listing) {
       setFormData({
-        category: listing.category || 'XRF Machines',
+        category: (typeof listing.category === 'object' ? listing.category?.name : listing.category) || 'XRF Machines',
         brand: listing.brand || '',
         model: listing.model || '',
         year: listing.yearOfPurchase ? listing.yearOfPurchase.toString() : '',
@@ -57,10 +58,11 @@ export const EditListingScreen: React.FC = () => {
         isMakeOffer: listing.pricingType === 'negotiable',
         price: listing.price ? listing.price.toString() : '',
         city: listing.city || '',
-        state: listing.state || ''
+        state: listing.state || '',
+        country: listing.country || ''
       });
-      if (listing.photos) {
-        setPhotoUris(listing.photos);
+      if (listing.images || listing.photos) {
+        setPhotoUris(listing.images || listing.photos);
       }
     }
   }, [listing]);
@@ -70,13 +72,14 @@ export const EditListingScreen: React.FC = () => {
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - photoUris.length,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUris(prev => [...prev, result.assets[0].uri]);
+      const newUris = result.assets.map(asset => asset.uri);
+      setPhotoUris(prev => [...prev, ...newUris].slice(0, 5));
     }
   };
 
@@ -109,6 +112,7 @@ export const EditListingScreen: React.FC = () => {
         price: formData.isMakeOffer ? null : parseFloat(formData.price) || 0,
         city: formData.city,
         state: formData.state,
+        country: formData.country,
       }, photoUris);
       
       Alert.alert('Success', 'Listing updated successfully!', [

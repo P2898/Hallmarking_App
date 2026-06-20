@@ -40,7 +40,8 @@ const TabNavigator = () => {
   }, [user, fetchChats]);
 
   const totalUnread = chats.reduce((sum, chat) => {
-    if (chat.unreadCount > 0 && chat.lastSenderId !== user?.uid) {
+    const userId = user?.id || (user as any)?.uid;
+    if (chat.unreadCount > 0 && chat.lastSenderId !== userId) {
       return sum + chat.unreadCount;
     }
     return sum;

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { useUsersStore } from './usersStore';
-import { useListingsStore } from './listingsStore';
-import { useChatsStore } from './chatsStore';
+import { useAuthStore } from './authStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface MonthlyRegData {
   month: string;
@@ -28,21 +28,41 @@ export interface StateDistribution {
   listings: number;
 }
 
+export interface StateDistributionData {
+  state: string;
+  users: number;
+  listings: number;
+}
+
+export interface CategoryDistributionData {
+  name: string;
+  value: number;
+  color: string;
+}
+
 interface AnalyticsState {
   loading: boolean;
+  totalUsers: number;
+  activeListings: number;
+  totalChats: number;
+  pendingListings: number;
+  estimatedGmv: number;
+  monthlyRegs: MonthlyRegData[];
+  monthlyListings: MonthlyListingData[];
+  stateDistribution: StateDistributionData[];
+  categoryDistribution: CategoryDistributionData[];
   refreshStats: () => void;
   getSummaryStats: () => {
     totalUsers: number;
     activeListings: number;
     totalChats: number;
-
     pendingListings: number;
     estimatedGmv: number;
   };
   getMonthlyRegs: () => MonthlyRegData[];
   getMonthlyListings: () => MonthlyListingData[];
-  getCategoryDistribution: () => CategoryData[];
-  getStateDistribution: () => StateDistribution[];
+  getCategoryDistribution: () => CategoryDistributionData[];
+  getStateDistribution: () => StateDistributionData[];
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -54,122 +74,80 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-export const useAnalyticsStore = create<AnalyticsState>((set) => ({
+export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
   loading: false,
-  refreshStats: () => {
+  totalUsers: 0,
+  activeListings: 0,
+  totalChats: 0,
+  pendingListings: 0,
+  estimatedGmv: 0,
+  monthlyRegs: [],
+  monthlyListings: [],
+  stateDistribution: [],
+  categoryDistribution: [],
+
+  refreshStats: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
     set({ loading: true });
-    // Trigger re-render; actual data is derived from live stores
-    setTimeout(() => set({ loading: false }), 300);
+
+    try {
+      const response = await fetch(`${API_URL}/api/analytics`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch analytics');
+      const data = await response.json();
+
+      set({
+        totalUsers: data.totalUsers,
+        activeListings: data.activeListings,
+        totalChats: data.totalChats,
+        pendingListings: data.pendingReports, // We don't have pending listings right now, mock using reports
+        estimatedGmv: data.totalTransactionVolume,
+        monthlyRegs: data.monthlyRegs || [],
+        monthlyListings: data.monthlyListings || [],
+        stateDistribution: data.stateDistribution || [],
+        categoryDistribution: data.categoryDistribution || [],
+        loading: false
+      });
+    } catch (error) {
+      console.error('Fetch analytics error:', error);
+      set({ loading: false });
+    }
   },
 
-  // Derive summary stats from live Firestore data
   getSummaryStats: () => {
-    const users = useUsersStore.getState().users;
-    const listings = useListingsStore.getState().listings;
-    const chats = useChatsStore.getState().chats;
-
-    const totalUsers = users.length;
-    const activeListings = listings.filter(l => l.status === 'approved').length;
-    const totalChats = chats.length;
-
-    const pendingListings = listings.filter(l => l.status === 'pending').length;
-    const estimatedGmv = listings
-      .filter(l => l.status === 'approved' || l.status === 'sold')
-      .reduce((sum, l) => sum + (l.price || 0), 0);
-
+    const { totalUsers, activeListings, totalChats, pendingListings, estimatedGmv } = get();
     return { totalUsers, activeListings, totalChats, pendingListings, estimatedGmv };
   },
 
-  // Derive monthly registration data from real user joinedDate
+  // The below functions return the live grouped data returned from the backend.
   getMonthlyRegs: () => {
-    const users = useUsersStore.getState().users;
-    const currentYear = new Date().getFullYear();
-    const monthlyMap: Record<string, { jewellers: number; centres: number; refiners: number }> = {};
-
-    MONTH_NAMES.forEach(m => { monthlyMap[m] = { jewellers: 0, centres: 0, refiners: 0 }; });
-
-    users.forEach(u => {
-      const date = new Date(u.joinedDate);
-      if (date.getFullYear() === currentYear) {
-        const month = MONTH_NAMES[date.getMonth()];
-        if (u.role === 'jeweller') monthlyMap[month].jewellers++;
-        else if (u.role === 'hallmarking_centre') monthlyMap[month].centres++;
-        else if (u.role === 'refiner') monthlyMap[month].refiners++;
-      }
-    });
-
-    // Return only months up to current month
-    const currentMonth = new Date().getMonth();
-    return MONTH_NAMES.slice(0, currentMonth + 1).map(month => ({
+    const { monthlyRegs } = get();
+    // Return empty fallback array if not yet fetched
+    return monthlyRegs.length > 0 ? monthlyRegs : MONTH_NAMES.map(month => ({
       month,
-      ...monthlyMap[month]
+      jewellers: 0,
+      centres: 0,
+      refiners: 0,
     }));
   },
 
-  // Derive monthly listing data from real createdDate
   getMonthlyListings: () => {
-    const listings = useListingsStore.getState().listings;
-    const currentYear = new Date().getFullYear();
-    const monthlyMap: Record<string, { created: number; sold: number }> = {};
-
-    MONTH_NAMES.forEach(m => { monthlyMap[m] = { created: 0, sold: 0 }; });
-
-    listings.forEach(l => {
-      const date = new Date(l.createdDate);
-      if (date.getFullYear() === currentYear) {
-        const month = MONTH_NAMES[date.getMonth()];
-        monthlyMap[month].created++;
-        if (l.status === 'sold') monthlyMap[month].sold++;
-      }
-    });
-
-    const currentMonth = new Date().getMonth();
-    return MONTH_NAMES.slice(0, currentMonth + 1).map(month => ({
+    const { monthlyListings } = get();
+    return monthlyListings.length > 0 ? monthlyListings : MONTH_NAMES.map(month => ({
       month,
-      ...monthlyMap[month]
+      created: 0,
+      sold: 0,
     }));
   },
 
-  // Derive category distribution from real listings
   getCategoryDistribution: () => {
-    const listings = useListingsStore.getState().listings;
-    const catMap: Record<string, number> = {};
-
-    listings.forEach(l => {
-      catMap[l.category] = (catMap[l.category] || 0) + 1;
-    });
-
-    return Object.entries(catMap).map(([name, value]) => ({
-      name,
-      value,
-      color: CATEGORY_COLORS[name] || '#6B7280'
-    }));
+    return get().categoryDistribution;
   },
 
-  // Derive state distribution from real users and listings
   getStateDistribution: () => {
-    const users = useUsersStore.getState().users;
-    const listings = useListingsStore.getState().listings;
-
-    const stateMap: Record<string, { users: number; listings: number }> = {};
-
-    users.forEach(u => {
-      if (u.state) {
-        if (!stateMap[u.state]) stateMap[u.state] = { users: 0, listings: 0 };
-        stateMap[u.state].users++;
-      }
-    });
-
-    listings.forEach(l => {
-      if (l.state) {
-        if (!stateMap[l.state]) stateMap[l.state] = { users: 0, listings: 0 };
-        stateMap[l.state].listings++;
-      }
-    });
-
-    return Object.entries(stateMap)
-      .map(([state, data]) => ({ state, ...data }))
-      .sort((a, b) => b.users - a.users)
-      .slice(0, 8); // Top 8 states
-  }
+    return get().stateDistribution;
+  },
 }));

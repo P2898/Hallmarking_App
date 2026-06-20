@@ -12,12 +12,13 @@ import { useListingsStore } from '../store/listingsStore';
 import { useCategoriesStore } from '../store/categoriesStore';
 
 export const Categories = () => {
-  const { listings } = useListingsStore();
+  const { listings, subscribeToListings } = useListingsStore();
   const { categories, subscribeToCategories, addCategory, updateCategory, deleteCategory, loading } = useCategoriesStore();
 
   useEffect(() => {
     subscribeToCategories();
-  }, [subscribeToCategories]);
+    subscribeToListings();
+  }, [subscribeToCategories, subscribeToListings]);
 
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#D4AF37');
@@ -137,7 +138,13 @@ export const Categories = () => {
               <div className="flex justify-between items-center pt-4 border-t border-gray-50 mt-4 text-xs">
                 <span className="text-gray-400">Total Listings</span>
                 <span className="font-bold text-gray-800 flex items-center gap-1">
-                  <Eye size={12} /> {listings.filter(l => l.category === cat.name).length} listings
+                  <Eye size={12} /> {listings.filter(l => {
+                    if (l.status !== 'approved') return false;
+                    const catName = typeof (l as any).category === 'object'
+                      ? (l as any).category?.name
+                      : l.category;
+                    return catName === cat.name || (l as any).categoryId === cat.id;
+                  }).length} listings
                 </span>
               </div>
             </div>

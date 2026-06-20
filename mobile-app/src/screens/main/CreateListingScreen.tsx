@@ -35,7 +35,8 @@ export const CreateListingScreen: React.FC = () => {
     isMakeOffer: false,
     price: '',
     city: '',
-    state: ''
+    state: '',
+    country: ''
   });
 
   // Set first category as default once loaded
@@ -50,13 +51,14 @@ export const CreateListingScreen: React.FC = () => {
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - photoUris.length,
       quality: 0.8,
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUris(prev => [...prev, result.assets[0].uri]);
+      const newUris = result.assets.map(asset => asset.uri);
+      setPhotoUris(prev => [...prev, ...newUris].slice(0, 5));
     }
   };
 
@@ -76,7 +78,11 @@ export const CreateListingScreen: React.FC = () => {
 
     setLoading(true);
     try {
+      const selectedCategoryObj = categories.find(c => c.name === formData.category);
       await createListing({
+        title: `${formData.brand} ${formData.model}`.trim(),
+        categoryId: selectedCategoryObj?.id,
+        location: `${formData.city}, ${formData.state}`,
         category: formData.category,
         brand: formData.brand,
         model: formData.model,
@@ -84,14 +90,15 @@ export const CreateListingScreen: React.FC = () => {
         yearsUsed: parseInt(formData.yearsUsed) || 0,
         condition: formData.condition || 'Not specified',
         warranty: formData.warranty || 'None',
-        description: formData.description,
+        description: formData.description || '',
         pricingType: formData.isMakeOffer ? 'negotiable' : 'fixed',
-        price: formData.isMakeOffer ? null : parseFloat(formData.price) || 0,
+        price: formData.isMakeOffer ? 0 : parseFloat(formData.price) || 0,
         city: formData.city,
         state: formData.state,
+        country: formData.country,
       }, photoUris);
       
-      Alert.alert('Success', 'Listing submitted for review!', [
+      Alert.alert('Success', 'Listing published successfully!', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);
     } catch (error: any) {

@@ -7,10 +7,8 @@ import { MainStackParamList } from '../../types/navigation';
 import { useChatStore } from '../../store/chatStore';
 import { useAuthStore } from '../../store/authStore';
 import { useListingsStore } from '../../store/listingsStore';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../firebase.config';
 import { useTranslation } from 'react-i18next';
-import { Alert } from 'react-native';
+import { Alert, Modal } from 'react-native';
 
 export const IndividualChatScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -27,31 +25,16 @@ export const IndividualChatScreen: React.FC = () => {
   React.useEffect(() => {
     if (chatId) {
       const unsubscribe = fetchMessages(chatId);
-      
-      // Reset unread count if we are opening it and there are unread messages
-      if (chat && chat.unreadCount > 0 && chat.lastSenderId !== user?.uid) {
-        updateDoc(doc(db, 'chats', chatId), { unreadCount: 0 });
-      }
-      
       return () => unsubscribe();
     }
-  }, [chatId, fetchMessages, chat?.unreadCount]);
+  }, [chatId, fetchMessages]);
 
-  const [profile, setProfile] = useState<any>(null);
-  React.useEffect(() => {
-    if (!chat || !user) return;
-    const otherId = chat.participants.find(p => p !== user.uid);
-    if (otherId) {
-      getDoc(doc(db, 'users', otherId)).then(snap => {
-        if (snap.exists()) setProfile(snap.data());
-      });
-    }
-  }, [chat, user]);
+  const otherUser = chat ? (chat.buyerId === user?.id ? chat.seller : chat.buyer) : null;
+  const chatName = otherUser?.displayName || 'User';
+  const chatCompany = (otherUser as any)?.companyName || 'Company';
 
   const [message, setMessage] = useState('');
-
-  const chatName = profile?.fullName || 'User';
-  const chatCompany = profile?.companyName || 'Company';
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
 
   const handleSend = () => {
     if (message.trim() && chatId) {
@@ -62,7 +45,7 @@ export const IndividualChatScreen: React.FC = () => {
 
   const associatedListing = chat ? myListings.find(l => l.id === chat.listingId) : null;
   const isSeller = !!associatedListing;
-  const otherParticipantId = chat?.participants.find(p => p !== user?.uid);
+  const otherParticipantId = chat ? (chat.buyerId === user?.id ? chat.sellerId : chat.buyerId) : null;
 
   const handleMarkSold = () => {
     if (!associatedListing || !otherParticipantId) return;
@@ -97,25 +80,16 @@ export const IndividualChatScreen: React.FC = () => {
         <View className="w-10 h-10 rounded-full bg-gold/20 justify-center items-center mr-3">
           <Text className="text-gold font-bold">{chatName.charAt(0)}</Text>
         </View>
-        <View className="flex-1">
+        <TouchableOpacity 
+          className="flex-1"
+          onPress={() => setProfileModalVisible(true)}
+        >
           <Text className="text-dark font-bold text-base" numberOfLines={1}>{chatName}</Text>
           <Text className="text-gold text-xs font-medium">{chatCompany}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
 
-      {isSeller && associatedListing?.status !== 'sold' && (
-        <View className="bg-blue-50 px-4 py-3 border-b border-blue-100 flex-row items-center justify-between">
-          <Text className="text-blue-800 font-medium text-sm flex-1 mr-2">
-            Sell "{associatedListing.brand} {associatedListing.category}" to {chatName}?
-          </Text>
-          <TouchableOpacity 
-            onPress={handleMarkSold}
-            className="bg-blue-600 px-3 py-1.5 rounded-lg"
-          >
-            <Text className="text-white font-bold text-xs">Mark Sold</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
@@ -127,14 +101,14 @@ export const IndividualChatScreen: React.FC = () => {
           contentContainerStyle={{ padding: 16 }}
           inverted={false}
           renderItem={({ item }) => {
-            const isMe = item.senderId === user?.uid;
+            const isMe = item.senderId === user?.id;
             return (
               <View className={`mb-4 max-w-[80%] ${isMe ? 'self-end' : 'self-start'}`}>
                 <View className={`p-3 rounded-2xl ${isMe ? 'bg-gold rounded-br-sm' : 'bg-white rounded-bl-sm border border-gray-100'}`}>
                   <Text className={isMe ? 'text-white' : 'text-dark'}>{item.text}</Text>
                 </View>
                 <Text className={`text-[10px] text-gray-400 mt-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                  {item.timestamp ? new Date(item.timestamp.seconds * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                  {item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </Text>
               </View>
             );
@@ -162,6 +136,32 @@ export const IndividualChatScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* User Profile Modal */}
+      <Modal visible={profileModalVisible} transparent animationType="slide">
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white rounded-t-3xl p-6 h-1/2">
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-xl font-bold text-dark">{t('profile.details', 'User Profile')}</Text>
+              <TouchableOpacity onPress={() => setProfileModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#1A1A1A" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="items-center mb-6">
+              <View className="w-24 h-24 rounded-full bg-gold/20 justify-center items-center mb-4">
+                <Text className="text-gold font-bold text-3xl">{chatName.charAt(0).toUpperCase()}</Text>
+              </View>
+              <Text className="text-2xl font-bold text-dark">{chatName}</Text>
+              <Text className="text-gray-500">{chatCompany}</Text>
+              {(otherUser as any)?.city && (otherUser as any)?.state && (
+                <Text className="text-gray-400 mt-1">{(otherUser as any)?.city}, {(otherUser as any)?.state}</Text>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
+

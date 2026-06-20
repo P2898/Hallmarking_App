@@ -1,10 +1,11 @@
 import { create } from 'zustand';
-import { auth } from '../utils/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 interface AuthState {
   isAuthenticated: boolean;
   adminEmail: string | null;
+  token: string | null;
   error: string | null;
   login: (email: string, pass: string) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -12,53 +13,48 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set) => {
   // Check if session exists in localStorage
-  const savedAuth = localStorage.getItem('mx_admin_auth');
+  const savedToken = localStorage.getItem('mx_admin_token');
   const savedEmail = localStorage.getItem('mx_admin_email');
 
   return {
-    isAuthenticated: savedAuth === 'true',
+    isAuthenticated: !!savedToken,
     adminEmail: savedEmail,
+    token: savedToken,
     error: null,
     login: async (email, pass) => {
-      const validEmail = localStorage.getItem('mx_valid_email') || 'Waqar@nchgroup.in';
-      const validPass = localStorage.getItem('mx_valid_pass') || 'nch@waqar21';
-
-      if (email === validEmail && pass === validPass) {
-        try {
-          // Attempt to sign in first
-          await signInWithEmailAndPassword(auth, email, pass);
-          localStorage.setItem('mx_admin_auth', 'true');
-          localStorage.setItem('mx_admin_email', email);
-          set({ isAuthenticated: true, adminEmail: email, error: null });
-          return true;
-        } catch (error: any) {
-          // If the user doesn't exist yet, we can create it on the fly
-          // because we already verified the hardcoded credentials above.
-          try {
-            await createUserWithEmailAndPassword(auth, email, pass);
-            localStorage.setItem('mx_admin_auth', 'true');
-            localStorage.setItem('mx_admin_email', email);
-            set({ isAuthenticated: true, adminEmail: email, error: null });
-            return true;
-          } catch (createError: any) {
-            set({ error: 'Failed to authenticate with Firebase: ' + createError.message });
-            return false;
-          }
+      try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pass })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          set({ error: data.error || 'Login failed' });
+          return false;
         }
-      } else {
-        set({ error: 'Invalid username or password.' });
+
+        // Verify the user is an admin
+        if (data.user.role !== 'admin') {
+          set({ error: 'Access denied: Admin privileges required.' });
+          return false;
+        }
+
+        localStorage.setItem('mx_admin_token', data.token);
+        localStorage.setItem('mx_admin_email', data.user.email);
+        set({ isAuthenticated: true, adminEmail: data.user.email, token: data.token, error: null });
+        return true;
+      } catch (error: any) {
+        set({ error: 'Failed to connect to backend: ' + error.message });
         return false;
       }
     },
     logout: async () => {
-      try {
-        await signOut(auth);
-      } catch (e) {
-        console.error(e);
-      }
-      localStorage.removeItem('mx_admin_auth');
+      localStorage.removeItem('mx_admin_token');
       localStorage.removeItem('mx_admin_email');
-      set({ isAuthenticated: false, adminEmail: null, error: null });
+      set({ isAuthenticated: false, adminEmail: null, token: null, error: null });
     }
   };
 });

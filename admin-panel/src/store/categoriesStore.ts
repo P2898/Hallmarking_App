@@ -1,10 +1,13 @@
 import { create } from 'zustand';
-import { db } from '../utils/firebase';
-import { collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { useAuthStore } from './authStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface AdminCategory {
   id: string;
   name: string;
+  nameHi: string;
+  nameGu: string;
   color: string;
   order: number;
 }
@@ -13,73 +16,103 @@ interface CategoriesState {
   categories: AdminCategory[];
   loading: boolean;
   subscribeToCategories: () => void;
-  addCategory: (name: string, color: string) => Promise<void>;
-  updateCategory: (id: string, name: string) => Promise<void>;
+  addCategory: (name: string, color: string, nameHi?: string, nameGu?: string) => Promise<void>;
+  updateCategory: (id: string, name: string, nameHi?: string, nameGu?: string) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
-  seedDefaultCategories: () => Promise<void>;
 }
-
-const DEFAULT_CATEGORIES = [
-  { name: 'XRF Machines', color: '#D4AF37', order: 0 },
-  { name: 'Laser Marking', color: '#1A1A1A', order: 1 },
-  { name: 'Micro Balances', color: '#4B5563', order: 2 },
-  { name: 'Fire Assay Equipment', color: '#9CA3AF', order: 3 },
-];
-
-let unsubscribe: (() => void) | null = null;
 
 export const useCategoriesStore = create<CategoriesState>((set, get) => ({
   categories: [],
-  loading: true,
+  loading: false,
 
-  subscribeToCategories: () => {
-    if (unsubscribe) return;
+  subscribeToCategories: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    
     set({ loading: true });
 
-    unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
-      if (snapshot.empty) {
-        // No categories in DB yet — seed defaults
-        get().seedDefaultCategories();
-        return;
-      }
-      const cats: AdminCategory[] = snapshot.docs.map(d => ({
+    try {
+      const response = await fetch(`${API_URL}/api/categories`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch categories');
+      const data = await response.json();
+
+      const cats: AdminCategory[] = data.map((d: any, index: number) => ({
         id: d.id,
-        name: d.data().name,
-        color: d.data().color || '#D4AF37',
-        order: d.data().order ?? 99,
-      })).sort((a, b) => a.order - b.order);
+        name: d.name,
+        nameHi: d.nameHi || '',
+        nameGu: d.nameGu || '',
+        color: d.icon || '#D4AF37',
+        order: index,
+      }));
 
       set({ categories: cats, loading: false });
-    }, (error) => {
-      console.error('Firestore categories error:', error.message);
+    } catch (error: any) {
+      console.error('Fetch categories error:', error.message);
       set({ loading: false });
-    });
-  },
-
-  seedDefaultCategories: async () => {
-    try {
-      for (const cat of DEFAULT_CATEGORIES) {
-        await addDoc(collection(db, 'categories'), cat);
-      }
-    } catch (e) {
-      console.error('Failed to seed default categories:', e);
     }
   },
 
-  addCategory: async (name, color) => {
-    const { categories } = get();
-    await addDoc(collection(db, 'categories'), {
-      name,
-      color,
-      order: categories.length,
-    });
+  addCategory: async (name, color, nameHi, nameGu) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/categories`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, icon: color, nameHi, nameGu })
+      });
+      if (!response.ok) throw new Error('Failed to add category');
+      
+      // Refresh
+      get().subscribeToCategories();
+    } catch (e) {
+      console.error('Failed to add category:', e);
+    }
   },
 
-  updateCategory: async (id, name) => {
-    await updateDoc(doc(db, 'categories', id), { name });
+  updateCategory: async (id, name, nameHi, nameGu) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/categories/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, nameHi, nameGu })
+      });
+      if (!response.ok) throw new Error('Failed to update category');
+      
+      // Refresh
+      get().subscribeToCategories();
+    } catch (e) {
+      console.error('Failed to update category:', e);
+    }
   },
 
   deleteCategory: async (id) => {
-    await deleteDoc(doc(db, 'categories', id));
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/categories/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to delete category');
+      
+      // Refresh
+      get().subscribeToCategories();
+    } catch (e) {
+      console.error('Failed to delete category:', e);
+    }
   },
 }));

@@ -3,24 +3,52 @@ import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacit
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useAppStore } from '../../store/useAppStore';
+import { useAuthStore } from '../../store/authStore';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Alert } from 'react-native';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation();
-  const { user } = useAppStore();
+  const { userProfile, updateProfile } = useAuthStore();
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
-    fullName: user?.fullName || '',
-    companyName: user?.companyName || '',
-    city: user?.city || '',
-    state: user?.state || ''
+    fullName: userProfile?.displayName || userProfile?.fullName || '',
+    companyName: userProfile?.companyName || '',
+    city: userProfile?.city || '',
+    state: userProfile?.state || '',
+    password: '',
   });
 
-  const handleSave = () => {
-    // Mock save logic
-    navigation.goBack();
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const dataToUpdate: any = {
+        displayName: formData.fullName,
+        companyName: formData.companyName,
+        city: formData.city,
+        state: formData.state,
+      };
+      
+      if (formData.password) {
+        if (formData.password.length < 6) {
+          Alert.alert('Error', 'Password must be at least 6 characters long');
+          setLoading(false);
+          return;
+        }
+        dataToUpdate.password = formData.password;
+      }
+
+      await updateProfile(dataToUpdate);
+      Alert.alert('Success', 'Profile updated successfully', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -70,12 +98,23 @@ export const EditProfileScreen: React.FC = () => {
                 />
               </View>
             </View>
+
+            <View className="mt-4 pt-4 border-t border-gray-100">
+              <Text className="text-dark font-bold text-lg mb-4">Reset Password</Text>
+              <Input 
+                label="New Password"
+                value={formData.password}
+                onChangeText={(text) => setFormData(prev => ({...prev, password: text}))}
+                secureTextEntry
+                placeholder="Leave blank to keep current password"
+              />
+            </View>
           </View>
 
           <Button 
-            title="Save Changes" 
+            title={loading ? "Saving..." : "Save Changes"} 
             onPress={handleSave} 
-            disabled={!formData.fullName || !formData.companyName || !formData.city || !formData.state}
+            disabled={loading || !formData.fullName}
           />
         </ScrollView>
       </KeyboardAvoidingView>

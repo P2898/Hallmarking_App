@@ -1,40 +1,32 @@
 import { create } from 'zustand';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '../../firebase.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from './authStore';
 
-const CLOUDINARY_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
-// Log config on startup to verify env vars are loaded
-console.log('[Cloudinary] Cloud name:', CLOUDINARY_CLOUD_NAME ?? '❌ MISSING - restart Expo with --clear');
-console.log('[Cloudinary] Upload preset:', CLOUDINARY_UPLOAD_PRESET ?? '❌ MISSING - restart Expo with --clear');
-
-const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000';
 
 interface Listing {
   id: string;
-  userId: string;
-  category: string;
-  brand: string;
-  model?: string;
-  yearOfPurchase: number;
-  condition: string;
-  conditionDescription?: string;
-  pricingType: string;
-  price: number | null;
-  city: string;
-  state: string;
-  photos: string[];
-  video: string | null;
+  sellerId: string;
+  categoryId: string;
+  buyerId?: string | null;
+  title: string;
   description: string;
-  status: 'pending' | 'active' | 'sold';
-  createdAt: any;
-  buyerId?: string;
-  yearsUsed?: number;
-  warranty?: string;
-  year?: number;
-  isMakeOffer?: boolean;
+  price: number;
+  images: string[]; // URLs of images
+  status: 'active' | 'sold';
+  condition: string;
+  location: string;
+  createdAt: string;
+  seller?: {
+    id: string;
+    displayName: string | null;
+    photoURL: string | null;
+    phoneNumber: string | null;
+  };
+  category?: {
+    id: string;
+    name: string;
+  };
 }
 
 interface ListingsStore {
@@ -49,47 +41,52 @@ interface ListingsStore {
   fetchMyListings: () => () => void;
   fetchBuyHistory: () => () => void;
   createListing: (data: any, photoUris: string[], videoUri?: string | null) => Promise<void>;
-  updateListingStatus: (id: string, status: 'sold' | 'active' | 'pending', buyerId?: string) => Promise<void>;
+  updateListingStatus: (id: string, status: 'sold' | 'active', buyerId?: string) => Promise<void>;
   updateListing: (id: string, data: any, photoUris: string[]) => Promise<void>;
   deleteListing: (id: string) => Promise<void>;
   reportListing: (listingId: string, reason: string) => Promise<void>;
 }
 
-// Upload a single image URI to Cloudinary and return its secure URL
-const uploadImageToCloudinary = async (uri: string, index: number): Promise<string> => {
-  console.log(`[Cloudinary] Uploading photo ${index + 1}...`);
-
+// Helper function to upload image to our backend
+const uploadImageToBackend = async (uri: string, token: string | null): Promise<string> => {
+  console.log('[Backend Upload] Uploading image:', uri);
+  
   const formData = new FormData();
-  formData.append('file', {
+  // For Expo/React Native, we format the file object in FormData like this
+  const name = uri.split('/').pop() || 'upload.jpg';
+  const match = /\.(\w+)$/.exec(name);
+  const type = match ? `image/${match[1]}` : `image/jpeg`;
+  
+  formData.append('image', {
     uri,
-    type: 'image/jpeg',
-    name: `photo_${index}.jpg`,
+    name,
+    type,
   } as any);
-  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-  formData.append('folder', 'hallmarkhub/listings');
 
-  const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+  const headers: HeadersInit = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}/api/upload`, {
     method: 'POST',
+    headers,
     body: formData,
   });
 
   if (!response.ok) {
-    const errorBody = await response.text();
-    console.error('[Cloudinary] Upload failed:', response.status, errorBody);
-    let cloudinaryMessage = `HTTP ${response.status}`;
-    try {
-      const parsed = JSON.parse(errorBody);
-      cloudinaryMessage = parsed?.error?.message || cloudinaryMessage;
-    } catch (_) {}
-    throw new Error(`Photo upload failed: ${cloudinaryMessage}`);
+    const errText = await response.text();
+    console.error('[Backend Upload] Image upload failed:', response.status, errText);
+    throw new Error('Image upload failed');
   }
 
   const result = await response.json();
-  console.log(`[Cloudinary] Photo ${index + 1} uploaded: ${result.secure_url}`);
-  return result.secure_url;
+  console.log('[Backend Upload] Upload successful, relative path:', result.url);
+  // Return the full URL or let the component handle it. Let's return the full URL to make it easy to render.
+  return `${API_URL}${result.url}`;
 };
 
-export const useListingsStore = create<ListingsStore>((set) => ({
+export const useListingsStore = create<ListingsStore>((set, get) => ({
   activeListings: [],
   myListings: [],
   buyHistory: [],
@@ -99,113 +96,224 @@ export const useListingsStore = create<ListingsStore>((set) => ({
   error: null,
 
   fetchActiveListings: () => {
+    let active = true;
     set({ loadingActive: true, error: null });
-    const q = query(collection(db, 'listings'), where('status', '==', 'active'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const listings = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Listing));
-      set({ activeListings: listings, loadingActive: false });
-    }, (error) => {
-      console.error('[Listings] fetchActiveListings error:', error.message);
-      set({ error: error.message, loadingActive: false });
-    });
-    return unsubscribe;
+
+    const fetchListings = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/listings?status=active`);
+        if (!response.ok) throw new Error('Failed to fetch active listings');
+        const data = await response.json();
+        
+        if (active) {
+          set({ activeListings: data, loadingActive: false });
+        }
+      } catch (error: any) {
+        console.error('[Listings] fetchActiveListings error:', error.message);
+        if (active) {
+          set({ error: error.message, loadingActive: false });
+        }
+      }
+    };
+
+    fetchListings();
+
+    return () => {
+      active = false;
+    };
   },
 
   fetchMyListings: () => {
-    if (!auth.currentUser) return () => {};
+    let active = true;
+    const token = useAuthStore.getState().token;
+    const user = useAuthStore.getState().user;
+    if (!token || !user) return () => {};
+
     set({ loadingMy: true, error: null });
-    const q = query(collection(db, 'listings'), where('userId', '==', auth.currentUser.uid));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const listings = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Listing));
-      set({ myListings: listings, loadingMy: false });
-    }, (error) => {
-      console.error('[Listings] fetchMyListings error:', error.message);
-      set({ error: error.message, loadingMy: false });
-    });
-    return unsubscribe;
+
+    const fetchMy = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/listings?sellerId=${user.id}&status=all`);
+        if (!response.ok) throw new Error('Failed to fetch my listings');
+        const data = await response.json();
+        
+        if (active) {
+          set({ myListings: data, loadingMy: false });
+        }
+      } catch (error: any) {
+        console.error('[Listings] fetchMyListings error:', error.message);
+        if (active) {
+          set({ error: error.message, loadingMy: false });
+        }
+      }
+    };
+
+    fetchMy();
+
+    return () => {
+      active = false;
+    };
   },
 
   fetchBuyHistory: () => {
-    if (!auth.currentUser) return () => {};
+    let active = true;
+    const token = useAuthStore.getState().token;
+    const user = useAuthStore.getState().user;
+    if (!token || !user) return () => {};
+
     set({ loadingBuyHistory: true, error: null });
-    const q = query(collection(db, 'listings'), where('buyerId', '==', auth.currentUser.uid), where('status', '==', 'sold'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const listings = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Listing));
-      set({ buyHistory: listings, loadingBuyHistory: false });
-    }, (error) => {
-      console.error('[Listings] fetchBuyHistory error:', error.message);
-      set({ error: error.message, loadingBuyHistory: false });
-    });
-    return unsubscribe;
+
+    const fetchBuy = async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/listings?buyerId=${user.id}&status=sold`);
+        if (!response.ok) throw new Error('Failed to fetch buy history');
+        const data = await response.json();
+        
+        if (active) {
+          set({ buyHistory: data, loadingBuyHistory: false });
+        }
+      } catch (error: any) {
+        console.error('[Listings] fetchBuyHistory error:', error.message);
+        if (active) {
+          set({ error: error.message, loadingBuyHistory: false });
+        }
+      }
+    };
+
+    fetchBuy();
+
+    return () => {
+      active = false;
+    };
   },
 
   createListing: async (data, photoUris, videoUri) => {
-    if (!auth.currentUser) throw new Error('Not authenticated');
+    const token = useAuthStore.getState().token;
+    if (!token) throw new Error('Not authenticated');
 
-    const userId = auth.currentUser.uid;
-    const userProfile = useAuthStore.getState().userProfile;
-    const sellerName = userProfile?.fullName || userProfile?.name || 'Unknown';
     const photoUrls: string[] = [];
-
-    // Upload all photos to Cloudinary
     for (let i = 0; i < photoUris.length; i++) {
-      const url = await uploadImageToCloudinary(photoUris[i], i);
+      const url = await uploadImageToBackend(photoUris[i], token);
       photoUrls.push(url);
     }
 
-    // Save listing to Firestore — status 'active' so it appears immediately in home feed
-    await addDoc(collection(db, 'listings'), {
-      ...data,
-      userId,
-      sellerName,
-      photos: photoUrls,
-      video: null,
-      status: 'active',
-      createdAt: serverTimestamp(),
+    const response = await fetch(`${API_URL}/api/listings`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...data,
+        images: photoUrls,
+      }),
     });
 
-    console.log('[Listings] Listing created successfully!');
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to create listing');
+    }
+
+    console.log('[Listings] Listing created successfully on custom backend!');
+    get().fetchActiveListings(); // Refresh list
   },
 
   updateListingStatus: async (id, status, buyerId) => {
-    const updateData: any = { status };
-    if (buyerId) updateData.buyerId = buyerId;
-    await updateDoc(doc(db, 'listings', id), updateData);
+    const token = useAuthStore.getState().token;
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${API_URL}/api/listings/${id}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status, buyerId }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to update listing status');
+    }
+
+    // Refresh listings
+    get().fetchActiveListings();
+    get().fetchMyListings();
   },
 
   updateListing: async (id, data, photoUris) => {
-    if (!auth.currentUser) throw new Error('Not authenticated');
+    const token = useAuthStore.getState().token;
+    if (!token) throw new Error('Not authenticated');
 
     const photoUrls: string[] = [];
-
     for (let i = 0; i < photoUris.length; i++) {
       if (photoUris[i].startsWith('http')) {
         photoUrls.push(photoUris[i]);
       } else {
-        const url = await uploadImageToCloudinary(photoUris[i], i);
+        const url = await uploadImageToBackend(photoUris[i], token);
         photoUrls.push(url);
       }
     }
 
-    await updateDoc(doc(db, 'listings', id), {
-      ...data,
-      photos: photoUrls,
+    const response = await fetch(`${API_URL}/api/listings/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...data,
+        images: photoUrls,
+      }),
     });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to update listing');
+    }
+
+    get().fetchActiveListings();
+    get().fetchMyListings();
   },
 
   deleteListing: async (id) => {
-    await deleteDoc(doc(db, 'listings', id));
+    const token = useAuthStore.getState().token;
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${API_URL}/api/listings/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to delete listing');
+    }
+
+    get().fetchActiveListings();
+    get().fetchMyListings();
   },
 
   reportListing: async (listingId, reason) => {
-    if (!auth.currentUser) throw new Error('Not authenticated');
-    
-    await addDoc(collection(db, 'reports'), {
-      listingId,
-      reporterId: auth.currentUser.uid,
-      reason,
-      status: 'pending',
-      createdAt: serverTimestamp(),
+    const token = useAuthStore.getState().token;
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${API_URL}/api/reports`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ listingId, reason }),
     });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to submit report');
+    }
+
+    console.log(`[Listings] Report created for listing ${listingId}: ${reason}`);
   },
 }));

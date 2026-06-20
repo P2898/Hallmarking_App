@@ -17,21 +17,24 @@ export const ListingDetailScreen: React.FC = () => {
   const route = useRoute<RouteProp<MainStackParamList, 'ListingDetail'>>();
   const listingId = route.params?.id;
   
-  const { activeListings, myListings, deleteListing, reportListing } = useListingsStore();
+  const { activeListings, myListings, buyHistory, deleteListing, reportListing, updateListingStatus } = useListingsStore();
   const { getOrCreateChat } = useChatStore();
   const { user } = useAuthStore();
-  const allListings = [...activeListings, ...myListings];
+  const allListings = [...activeListings, ...myListings, ...buyHistory];
   const listing = allListings.find(l => l.id === listingId);
   const [activeImage, setActiveImage] = useState(0);
   const [startingChat, setStartingChat] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   if (!listing) return null;
 
   const handleStartChat = async () => {
     try {
       setStartingChat(true);
-      const newChatId = await getOrCreateChat(listing.userId, listing.id);
+      const targetId = listing.sellerId || listing.userId;
+      if (!targetId) throw new Error('Seller not found');
+      
+      const newChatId = await getOrCreateChat(targetId, listing.id);
       navigation.navigate('IndividualChat', { id: newChatId });
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Could not start chat');
@@ -67,8 +70,8 @@ export const ListingDetailScreen: React.FC = () => {
   };
 
   const screenWidth = Dimensions.get('window').width;
-  const photos = listing.photos && listing.photos.length > 0 
-    ? listing.photos 
+  const photos = (listing.images || listing.photos) && (listing.images || listing.photos).length > 0 
+    ? (listing.images || listing.photos) 
     : ['https://placehold.co/600x400/D4AF37/ffffff.png?text=No+Photo'];
 
   const handleScroll = (event: any) => {
@@ -124,38 +127,81 @@ export const ListingDetailScreen: React.FC = () => {
         <View className="p-4">
           <View className="flex-row justify-between items-start mb-3">
             <View className="bg-gold/10 px-3 py-1.5 rounded-md">
-              <Text className="text-gold text-sm font-bold">{listing.category}</Text>
+              <Text numberOfLines={1} className="text-gold text-sm font-bold">
+                {(() => {
+                  const catName = typeof listing.category === 'object' ? listing.category?.name : listing.category;
+                  const staticMap: any = {
+                    'XRF Machines': t('categories.xrf'),
+                    'Laser Marking': t('categories.laser'),
+                    'Micro Balances': t('categories.micro'),
+                    'Fire Assay Equipment': t('categories.fireAssay')
+                  };
+                  if (staticMap[catName] && staticMap[catName] !== catName) return staticMap[catName];
+                  const lang = i18n.language;
+                  const catObj = typeof listing.category === 'object' ? listing.category : null;
+                  if (lang === 'hi' && catObj?.nameHi) return catObj.nameHi;
+                  if (lang === 'gu' && catObj?.nameGu) return catObj.nameGu;
+                  return catName;
+                })()}
+              </Text>
             </View>
             <View className="flex-row items-center">
               <Ionicons name="location" size={16} color="#9CA3AF" />
-              <Text className="text-gray-500 ml-1">{listing.city}, {listing.state}</Text>
+              <Text className="text-gray-500 ml-1">{[listing.city, listing.state].filter(Boolean).join(', ')}</Text>
             </View>
           </View>
 
           <Text className="text-2xl font-extrabold text-dark mb-1">
             {listing.brand} {listing.model ? `- ${listing.model}` : ''}
           </Text>
-          <Text className="text-gray-500 text-base mb-4">{listing.yearOfPurchase || listing.year} • {listing.condition}</Text>
+
           
           <Text className="text-3xl font-black text-dark mb-6">₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
 
-          {user?.uid !== listing.userId && (
-            <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }} className="mb-6 -mx-4">
-              {(listing.pricingType === 'negotiable' || listing.isMakeOffer) && (
+          {user && (user.id || user.uid) !== (listing.sellerId || listing.userId) ? (
+            listing.status !== 'sold' && (
+              <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }} className="mb-6 -mx-4">
+                {(listing.pricingType === 'negotiable' || listing.isMakeOffer) && (
+                  <View className="flex-1">
+                    <Button 
+                      title={t('listing.makeOffer')} 
+                      variant="outline" 
+                      onPress={() => navigation.navigate('MakeOffer', { id: listing.id })}
+                    />
+                  </View>
+                )}
                 <View className="flex-1">
                   <Button 
-                    title={t('listing.makeOffer')} 
-                    variant="outline" 
-                    onPress={() => navigation.navigate('MakeOffer', { id: listing.id })}
+                    title={t('listing.chatWithSeller')} 
+                    variant="primary" 
+                    loading={startingChat}
+                    onPress={handleStartChat}
                   />
                 </View>
-              )}
+              </View>
+            )
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }} className="mb-6 -mx-4">
               <View className="flex-1">
                 <Button 
-                  title={t('listing.chatWithSeller')} 
+                  title={t('listing.editListing')} 
                   variant="primary" 
-                  loading={startingChat}
-                  onPress={handleStartChat}
+                  onPress={() => navigation.navigate('EditListing', { id: listing.id })}
+                />
+              </View>
+              <View className="flex-1">
+                <Button 
+                  title={t('listing.deleteListing')} 
+                  variant="primary" 
+                  onPress={() => {
+                    Alert.alert(t('listing.deleteListing'), t('listing.deleteConfirm'), [
+                      { text: t('common.cancel'), style: 'cancel' },
+                      { text: t('common.delete'), style: 'destructive', onPress: async () => {
+                        await deleteListing(listing.id);
+                        navigation.goBack();
+                      }}
+                    ]);
+                  }}
                 />
               </View>
             </View>
@@ -174,28 +220,60 @@ export const ListingDetailScreen: React.FC = () => {
             <Text className="text-xl font-bold text-dark mb-3">{t('listing.specifications')}</Text>
             <View className="flex-row py-2 border-b border-gray-50">
               <Text className="flex-1 text-gray-500 font-medium">{t('listing.category')}</Text>
-              <Text className="flex-1 text-dark font-semibold">{listing.category}</Text>
+              <Text className="flex-1 text-dark font-semibold">
+                {(() => {
+                  const catName = typeof listing.category === 'object' ? listing.category?.name : listing.category;
+                  const staticMap: any = {
+                    'XRF Machines': t('categories.xrf'),
+                    'Laser Marking': t('categories.laser'),
+                    'Micro Balances': t('categories.micro'),
+                    'Fire Assay Equipment': t('categories.fireAssay')
+                  };
+                  if (staticMap[catName] && staticMap[catName] !== catName) return staticMap[catName];
+                  const lang = i18n.language;
+                  const catObj = typeof listing.category === 'object' ? listing.category : null;
+                  if (lang === 'hi' && catObj?.nameHi) return catObj.nameHi;
+                  if (lang === 'gu' && catObj?.nameGu) return catObj.nameGu;
+                  return catName;
+                })()}
+              </Text>
             </View>
-            <View className="flex-row py-2 border-b border-gray-50">
-              <Text className="flex-1 text-gray-500 font-medium">{t('listing.brand')}</Text>
-              <Text className="flex-1 text-dark font-semibold">{listing.brand}</Text>
-            </View>
+            {!!listing.brand && (
+              <View className="flex-row py-2 border-b border-gray-50">
+                <Text className="flex-1 text-gray-500 font-medium">{t('listing.brand')}</Text>
+                <Text className="flex-1 text-dark font-semibold">{listing.brand}</Text>
+              </View>
+            )}
             {!!listing.model && (
               <View className="flex-row py-2 border-b border-gray-50">
-                <Text className="flex-1 text-gray-500 font-medium">Model</Text>
+                <Text className="flex-1 text-gray-500 font-medium">{t('listing.model')}</Text>
                 <Text className="flex-1 text-dark font-semibold">{listing.model}</Text>
               </View>
             )}
-            <View className="flex-row py-2 border-b border-gray-50">
-              <Text className="flex-1 text-gray-500 font-medium">{t('listing.yearOfPurchase')}</Text>
-              <Text className="flex-1 text-dark font-semibold">{listing.yearOfPurchase || listing.year}</Text>
-            </View>
+            {!!(listing.yearOfPurchase || listing.year) && (
+              <View className="flex-row py-2 border-b border-gray-50">
+                <Text className="flex-1 text-gray-500 font-medium">{t('listing.yearOfPurchase')}</Text>
+                <Text className="flex-1 text-dark font-semibold">{listing.yearOfPurchase || listing.year}</Text>
+              </View>
+            )}
+            {!!listing.yearsUsed && (
+              <View className="flex-row py-2 border-b border-gray-50">
+                <Text className="flex-1 text-gray-500 font-medium">{t('listing.yearsUsed')}</Text>
+                <Text className="flex-1 text-dark font-semibold">{listing.yearsUsed}</Text>
+              </View>
+            )}
             <View className="flex-row py-2 border-b border-gray-50">
               <Text className="flex-1 text-gray-500 font-medium">{t('listing.condition')}</Text>
               <Text className="flex-1 text-dark font-semibold">{listing.condition}</Text>
             </View>
+            {!!listing.pricingType && (
+              <View className="flex-row py-2 border-b border-gray-50">
+                <Text className="flex-1 text-gray-500 font-medium">{t('listing.pricingType')}</Text>
+                <Text className="flex-1 text-dark font-semibold">{listing.pricingType === 'negotiable' ? t('listing.negotiable') : t('listing.fixedPrice')}</Text>
+              </View>
+            )}
             {!!listing.warranty && (
-              <View className="flex-row py-2">
+              <View className="flex-row py-2 border-b border-gray-50">
                 <Text className="flex-1 text-gray-500 font-medium">{t('listing.warranty')}</Text>
                 <Text className="flex-1 text-dark font-semibold">{listing.warranty}</Text>
               </View>

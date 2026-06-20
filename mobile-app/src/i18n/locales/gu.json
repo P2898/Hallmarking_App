@@ -5,12 +5,19 @@
     "edit": "ફેરફાર કરો",
     "delete": "કાઢી નાખો",
     "cancel": "રદ કરો",
-    "save": "સાચવો"
+    "save": "સાચવો",
+    "loading": "લોડ થઈ રહ્યું છે...",
+    "success": "સફળ",
+    "error": "ત્રુટિ",
+    "confirm": "ખાતરી કરો",
+    "submit": "જમા કરો",
+    "back": "પાછા"
   },
   "home": {
     "title": "MachineXchange",
     "availableEquipment": "ઉપલબ્ધ સાધનો",
-    "noResults": "તમારી શોધ માટે કોઈ પરિણામ મળ્યું નથી"
+    "noResults": "તમારી શોધ માટે કોઈ પરિણામ મળ્યું નથી",
+    "loading": "લિસ્ટિંગ લોડ થઈ રહી છે..."
   },
   "categories": {
     "all": "બધા",
@@ -20,17 +27,36 @@
     "fireAssay": "ફાયર એસે સાધનો"
   },
   "listing": {
-    "makeOffer": "ઓફર કરો",
-    "chatWithSeller": "વેચનાર સાથે ચેટ કરો",
+    "makeOffer": "ભાવ આપો",
+    "chatWithSeller": "વેચનાર સાથે વાત કરો",
     "description": "વર્ણન",
     "specifications": "વિશિષ્ટતાઓ",
     "category": "શ્રેણી",
     "brand": "બ્રાન્ડ",
+    "model": "મોડેલ",
     "yearOfPurchase": "ખરીદીનું વર્ષ",
+    "yearsUsed": "ઉપયોગનાં વર્ષો",
     "condition": "સ્થિતિ",
     "warranty": "વોરંટી",
-    "report": "આ લિસ્ટિંગની જાણ કરો",
-    "noDescription": "આ લિસ્ટિંગ માટે કોઈ વર્ણન પ્રદાન કરવામાં આવ્યું નથી. વધુ વિગતો માટે કૃપા કરીને વેચનારનો સંપર્ક કરો."
+    "pricingType": "ભાવ પ્રકાર",
+    "fixedPrice": "નિશ્ચિત ભાવ",
+    "negotiable": "વાટાઘાટ યોગ્ય",
+    "location": "સ્થાન",
+    "report": "આ લિસ્ટિંગની ફરિયાદ કરો",
+    "noDescription": "આ લિસ્ટિંગ માટે કોઈ વર્ણન આપવામાં આવ્યું નથી. વધુ માહિતી માટે વેચનારનો સંપર્ક કરો.",
+    "newListing": "નવી લિસ્ટિંગ",
+    "editListing": "લિસ્ટિંગ સંપાદિત કરો",
+    "submitListing": "લિસ્ટિંગ જમા કરો",
+    "updateListing": "લિસ્ટિંગ અપડેટ કરો",
+    "deleteListing": "લિસ્ટિંગ કાઢી નાખો",
+    "deleteConfirm": "શું તમે ખરેખર આ સાધનને કાયમી રૂપે કાઢી નાખવા માગો છો?",
+    "machineLocation": "મશીનનું સ્થાન",
+    "photos": "ફોટા",
+    "photosRequired": "ફોટા (જરૂરી)",
+    "reviewNote": "તમારી લિસ્ટિંગની સમીક્ષા એડમિન દ્વારા કરવામાં આવશે. કૃપા કરીને ખાતરી કરો કે બધી વિગતો સચોટ છે.",
+    "city": "શહેર",
+    "state": "રાજ્ય",
+    "country": "દેશ"
   },
   "tabs": {
     "home": "હોમ",
@@ -57,10 +83,12 @@
     "account": "ખાતું: {{status}}",
     "editProfile": "પ્રોફાઇલ સંપાદિત કરો",
     "myListings": "મારી લિસ્ટિંગ્સ",
-    "language": "ભાષા પસંદગી (EN/HI/GU)",
+    "buyHistory": "ખરીદીનો ઇતિહાસ",
+    "language": "ભાષા પસંદગી",
+    "selectLanguage": "ભાષા પસંદ કરો",
     "terms": "નિયમો અને શરતો",
-    "support": "સપોર્ટને કૉલ કરો",
+    "support": "સહાયતા માટે કૉલ કરો",
     "deleteAccount": "ખાતું કાઢી નાખો",
-    "logout": "લોગ આઉટ"
+    "logout": "લૉગ આઉટ કરો"
   }
 }

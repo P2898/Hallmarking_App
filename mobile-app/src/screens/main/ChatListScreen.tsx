@@ -4,12 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../../firebase.config';
 import { MainStackParamList } from '../../types/navigation';
 import { useChatStore } from '../../store/chatStore';
 import { useAuthStore } from '../../store/authStore';
-import { useListingsStore } from '../../store/listingsStore';
 import { useTranslation } from 'react-i18next';
 
 export const ChatListScreen: React.FC = () => {
@@ -18,51 +15,29 @@ export const ChatListScreen: React.FC = () => {
   const { user } = useAuthStore();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
-  const [profiles, setProfiles] = useState<{[uid:string]: any}>({});
 
   React.useEffect(() => {
     const unsubscribe = fetchChats();
     return () => unsubscribe();
   }, [fetchChats]);
 
-  React.useEffect(() => {
-    const fetchProfiles = async () => {
-      if (!user) return;
-      const newProfiles = { ...profiles };
-      let changed = false;
-      for (const chat of chats) {
-        const otherId = chat.participants.find(p => p !== user.uid);
-        if (otherId && !newProfiles[otherId]) {
-          try {
-            const docSnap = await getDoc(doc(db, 'users', otherId));
-            if (docSnap.exists()) {
-              newProfiles[otherId] = docSnap.data();
-              changed = true;
-            }
-          } catch(e) {}
-        }
-      }
-      if (changed) setProfiles(newProfiles);
-    };
-    fetchProfiles();
-  }, [chats, user]);
+  const filteredChats = (() => {
+    const seenUsers = new Set<string>();
+    return chats.filter(c => {
+      const otherUser = c.buyerId === user?.id ? c.seller : c.buyer;
+      if (!otherUser) return false;
 
-  const filteredChats = chats.filter(c => 
-    c.id.toLowerCase().includes(search.toLowerCase())
-  );
+      // Group by user so we only show the latest chat per person
+      if (seenUsers.has(otherUser.id)) return false;
+      seenUsers.add(otherUser.id);
 
-  const uniqueChats: typeof chats = [];
-  const seenUsers = new Set<string>();
-  
-  for (const chat of filteredChats) {
-    const otherId = chat.participants.find(p => p !== user?.uid);
-    if (otherId) {
-      if (!seenUsers.has(otherId)) {
-        seenUsers.add(otherId);
-        uniqueChats.push(chat);
-      }
-    }
-  }
+      const displayName = otherUser.displayName || 'User';
+      const nameMatch = displayName.toLowerCase().includes(search.toLowerCase());
+      const listingTitle = c.listing?.title || '';
+      const listingMatch = listingTitle.toLowerCase().includes(search.toLowerCase());
+      return nameMatch || listingMatch;
+    });
+  })();
 
   return (
     <SafeAreaView className="flex-1 bg-white pt-4">
@@ -81,12 +56,11 @@ export const ChatListScreen: React.FC = () => {
       </View>
 
       <FlatList
-        data={uniqueChats}
+        data={filteredChats}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
-          const otherId = item.participants.find(p => p !== user?.uid);
-          const profile = otherId ? profiles[otherId] : null;
-          const chatTitle = profile?.fullName || profile?.companyName || 'User';
+          const otherUser = item.buyerId === user?.id ? item.seller : item.buyer;
+          const chatTitle = otherUser?.displayName || 'User';
           const avatarLetter = chatTitle.charAt(0).toUpperCase();
 
           return (
@@ -104,7 +78,7 @@ export const ChatListScreen: React.FC = () => {
                 <View className="flex-row justify-between items-center mb-1">
                   <Text className="font-bold text-dark text-base">{chatTitle}</Text>
                   <Text className="text-xs text-gray-400">
-                    {item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString() : ''}
+                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}
                   </Text>
                 </View>
                 <Text className="text-gray-500 text-sm" numberOfLines={1}>
@@ -112,7 +86,7 @@ export const ChatListScreen: React.FC = () => {
                 </Text>
               </View>
               
-              {item.unreadCount > 0 && item.lastSenderId !== user?.uid && (
+              {item.unreadCount > 0 && item.lastSenderId !== user?.id && (
                 <View className="bg-gold w-6 h-6 rounded-full justify-center items-center ml-2">
                   <Text className="text-white text-xs font-bold">{item.unreadCount}</Text>
                 </View>
@@ -130,3 +104,4 @@ export const ChatListScreen: React.FC = () => {
     </SafeAreaView>
   );
 };
+

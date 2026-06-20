@@ -6,19 +6,26 @@ import {
   ExternalLink,
   PackagePlus
 } from 'lucide-react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotificationsStore, type AdminNotification } from '../store/notificationsStore';
 
 export const Notifications = () => {
-  const { notifications, markNotificationRead, markAllNotificationsRead } = useNotificationsStore();
+  const { notifications, fetchNotifications, markNotificationRead, markAllNotificationsRead, loading } = useNotificationsStore();
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const getIcon = (type: AdminNotification['type']) => {
     switch (type) {
       case 'new_listing':
         return <PackagePlus className="text-green-600" size={18} />;
+      case 'new_report':
+        return <ShieldAlert className="text-red-600" size={18} />;
       case 'listing_pending':
         return <FileCheck className="text-blue-600" size={18} />;
-      case 'chat_flagged':
+      case 'system_alert':
         return <ShieldAlert className="text-red-600" size={18} />;
       default:
         return <Bell className="text-gray-600" size={18} />;
@@ -31,7 +38,8 @@ export const Notifications = () => {
         return 'bg-green-50 border-green-100';
       case 'listing_pending':
         return 'bg-blue-50 border-blue-100';
-      case 'chat_flagged':
+      case 'new_report':
+      case 'system_alert':
         return 'bg-red-50 border-red-100';
       default:
         return 'bg-gray-50 border-gray-100';

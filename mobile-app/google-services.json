@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "427576221201",
+    "project_id": "hallmarkhub-3a4c9",
+    "storage_bucket": "hallmarkhub-3a4c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427576221201:android:325a992392c45079e35bb0",
+        "android_client_info": {
+          "package_name": "com.p2898.machinexchange.preview"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6vgh4TGU6EgQkjsEZzW8qeBDdHww1J8A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -27,7 +27,6 @@ export const Users = () => {
   // Search & Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
 
   // Selected User for Drawer
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -40,9 +39,7 @@ export const Users = () => {
       user.phone.includes(searchTerm);
       
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-
-    return matchesSearch && matchesRole && matchesStatus;
+    return matchesSearch && matchesRole;
   });
 
   return (
@@ -79,20 +76,6 @@ export const Users = () => {
             </select>
           </div>
 
-          {/* Account Status */}
-          <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-xl border border-gray-200">
-            <span className="text-xs font-semibold text-gray-500 uppercase">Status</span>
-            <select 
-              value={statusFilter} 
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent text-sm font-medium text-gray-700 outline-none cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -106,7 +89,6 @@ export const Users = () => {
                 <th className="py-4 px-6 font-medium">Contact Details</th>
                 <th className="py-4 px-6 font-medium">Location</th>
                 <th className="py-4 px-6 font-medium">Role</th>
-                <th className="py-4 px-6 font-medium">Account Status</th>
                 <th className="py-4 px-6 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -141,10 +123,6 @@ export const Users = () => {
                           <Mail size={12} className="text-gray-400" />
                           {user.email}
                         </p>
-                        <p className="text-gray-500 flex items-center gap-1.5">
-                          <Phone size={12} className="text-gray-400" />
-                          {user.phone}
-                        </p>
                       </div>
                     </td>
 
@@ -156,23 +134,16 @@ export const Users = () => {
                     {/* Role */}
                     <td className="py-4 px-6">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${
-                        user.role === 'hallmarking_centre' ? 'bg-indigo-50 text-indigo-700' :
-                        user.role === 'jeweller' ? 'bg-amber-50 text-amber-700' :
-                        user.role === 'refiner' ? 'bg-purple-50 text-purple-700' : 'bg-green-50 text-green-700'
+                        user.role === 'Hallmarking Centre' ? 'bg-indigo-50 text-indigo-700' :
+                        user.role === 'Jeweller' ? 'bg-amber-50 text-amber-700' :
+                        user.role === 'Refiner' ? 'bg-purple-50 text-purple-700' : 
+                        user.role === 'Assayer' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'
                       }`}>
-                        {user.role.replace('_', ' ')}
+                        {user.role}
                       </span>
                     </td>
 
-                    {/* Account Status */}
-                    <td className="py-4 px-6">
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${
-                        user.status === 'active' ? 'bg-green-100 text-green-800' :
-                        user.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.status}
-                      </span>
-                    </td>
+
 
                     {/* Actions */}
                     <td className="py-4 px-6 text-right">
@@ -191,7 +162,7 @@ export const Users = () => {
                               ? 'text-amber-600 hover:bg-amber-50' 
                               : 'text-green-600 hover:bg-green-50'
                           }`}
-                          title={user.status === 'active' ? 'Suspend User' : 'Activate User'}
+                          title={user.status === 'active' ? 'Block User' : 'Unblock User'}
                         >
                           {user.status === 'active' ? <UserX size={16} /> : <UserCheck size={16} />}
                         </button>
@@ -260,10 +231,6 @@ export const Users = () => {
                   <div className="flex items-center gap-3 text-sm text-gray-600">
                     <Mail size={16} className="text-gray-400" />
                     <span>{selectedUser.email}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm text-gray-600">
-                    <Phone size={16} className="text-gray-400" />
-                    <span>{selectedUser.phone}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-gray-600">
                     <MapPin size={16} className="text-gray-400" />

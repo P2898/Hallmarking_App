@@ -74,7 +74,7 @@ const MOCK_CHATS: Chat[] = [
 ];
 
 const MOCK_NOTIFICATIONS: AppNotification[] = [
-  { id: '1', type: 'approved', title: 'Account Approved', message: 'Welcome to MachineXchange! Your account is now active and you can start buying and selling industrial equipment.', timestamp: 'Just now', isRead: false },
+  { id: '1', type: 'approved', title: 'Account Approved', message: 'Welcome to MachineXchange! Your account is now active and you can start buying and selling industrial equipment.', timestamp: 'Just now', isRead: true },
 ];
 
 export const useDataStore = create<DataState>((set) => ({

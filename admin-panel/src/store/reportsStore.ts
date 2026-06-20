@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { db } from '../utils/firebase';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useNotificationsStore } from './notificationsStore';
+import { useAuthStore } from './authStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface Report {
   id: string;
@@ -20,88 +20,75 @@ interface ReportsState {
   deleteReport: (id: string) => Promise<void>;
 }
 
-let unsubscribe: (() => void) | null = null;
-const knownReportIds: Set<string> = new Set(
-  JSON.parse(localStorage.getItem('mx_known_report_ids') || '[]')
-);
 
-export const useReportsStore = create<ReportsState>((set) => ({
+export const useReportsStore = create<ReportsState>((set, get) => ({
   reports: [],
-  loading: true,
-  subscribeToReports: () => {
-    if (unsubscribe) return;
+  loading: false,
+  subscribeToReports: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
     set({ loading: true });
 
-    unsubscribe = onSnapshot(collection(db, 'reports'), (snapshot) => {
-      const reportsList: Report[] = [];
-      const newReportNotifications: { reason: string; id: string }[] = [];
+    try {
+      const response = await fetch(`${API_URL}/api/reports`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch reports');
+      const data = await response.json();
 
-      snapshot.forEach((d) => {
-        const data = d.data();
-        const createdAt = data.createdAt
-          ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0]
+      const reportsList: Report[] = [];
+      data.forEach((d: any) => {
+        const createdAt = d.createdAt
+          ? new Date(d.createdAt).toISOString().split('T')[0]
           : new Date().toISOString().split('T')[0];
 
         reportsList.push({
           id: d.id,
-          listingId: data.listingId || '',
-          reporterId: data.reporterId || '',
-          reason: data.reason || 'Spam',
-          status: data.status || 'pending',
+          listingId: d.listingId || '',
+          reporterId: d.reporterId || '',
+          reason: d.reason || 'Spam',
+          status: d.status || 'pending',
           createdAt,
         });
-
-        // Check if this is a new report
-        if (!knownReportIds.has(d.id)) {
-          knownReportIds.add(d.id);
-          newReportNotifications.push({
-            reason: data.reason || 'Spam',
-            id: d.id,
-          });
-        }
       });
 
-      // Persist known IDs
-      localStorage.setItem('mx_known_report_ids', JSON.stringify([...knownReportIds]));
-
-      // Fire notifications
-      if (newReportNotifications.length > 0) {
-        const { addNotification } = useNotificationsStore.getState();
-        newReportNotifications.forEach((nr) => {
-          addNotification({
-            type: 'system',
-            title: 'New Listing Report',
-            description: `A listing was reported for: ${nr.reason}`,
-            read: false,
-            link: '/reports',
-          });
-        });
-      }
-
       set({ reports: reportsList, loading: false });
-    }, (error) => {
-      console.error("Firestore reports connection error:", error.message);
+    } catch (error: any) {
+      console.error("Fetch reports error:", error.message);
       set({ reports: [], loading: false });
-    });
+    }
   },
   updateReportStatus: async (id, status) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
     try {
-      await updateDoc(doc(db, 'reports', id), { status });
+      await fetch(`${API_URL}/api/reports/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+      get().subscribeToReports();
     } catch (error) {
       console.error("Error updating report:", error);
-      set((state) => ({
-        reports: state.reports.map((r) => r.id === id ? { ...r, status } : r)
-      }));
     }
   },
   deleteReport: async (id) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+
     try {
-      await deleteDoc(doc(db, 'reports', id));
+      await fetch(`${API_URL}/api/reports/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      get().subscribeToReports();
     } catch (error) {
       console.error("Error deleting report:", error);
-      set((state) => ({
-        reports: state.reports.filter((r) => r.id !== id)
-      }));
     }
   }
 }));

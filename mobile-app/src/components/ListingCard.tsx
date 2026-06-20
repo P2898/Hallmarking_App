@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 interface ListingCardProps {
   listing: any;
@@ -19,6 +20,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   onMarkSold,
   onDelete
 }) => {
+  const { t, i18n } = useTranslation();
   return (
     <TouchableOpacity 
       activeOpacity={0.8}
@@ -26,8 +28,8 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       className="bg-white rounded-xl shadow-sm mb-4 border border-gray-100 overflow-hidden"
     >
       <View className="h-48 bg-gray-200 justify-center items-center">
-        {listing.photos && listing.photos.length > 0 ? (
-          <Image source={{ uri: listing.photos[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+        {(listing.images || listing.photos) && (listing.images || listing.photos).length > 0 ? (
+          <Image source={{ uri: (listing.images || listing.photos)[0] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
         ) : (
           <Ionicons name="camera-outline" size={40} color="#9CA3AF" />
         )}
@@ -36,7 +38,26 @@ export const ListingCard: React.FC<ListingCardProps> = ({
       <View className="p-4">
         <View className="flex-row justify-between items-start mb-2">
           <View className="bg-gold/10 px-2 py-1 rounded-md">
-            <Text className="text-gold text-xs font-bold">{listing.category}</Text>
+              <Text numberOfLines={1} className="text-gold text-xs font-semibold">
+                {(() => {
+                  const catName = typeof listing.category === 'object' ? (listing.category as any)?.name : listing.category;
+                  const staticMap: any = {
+                    'XRF Machines': t('categories.xrf'),
+                    'Laser Marking': t('categories.laser'),
+                    'Micro Balances': t('categories.micro'),
+                    'Fire Assay Equipment': t('categories.fireAssay')
+                  };
+                  if (staticMap[catName] && staticMap[catName] !== catName) {
+                    return staticMap[catName];
+                  }
+                  // For dynamically added categories, check listing's category object for translations
+                  const lang = i18n.language;
+                  const catObj = typeof listing.category === 'object' ? listing.category : null;
+                  if (lang === 'hi' && catObj?.nameHi) return catObj.nameHi;
+                  if (lang === 'gu' && catObj?.nameGu) return catObj.nameGu;
+                  return catName;
+                })()}
+              </Text>
           </View>
           {isMyListing && (
             <View className={`px-2 py-1 rounded-md ${listing.status === 'Active' ? 'bg-green-100' : listing.status === 'Pending' ? 'bg-amber-100' : 'bg-gray-100'}`}>
@@ -50,7 +71,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         <Text className="text-lg font-bold text-dark mb-1">
           {listing.brand} {listing.model ? `- ${listing.model}` : ''}
         </Text>
-        <Text className="text-gray-500 text-sm mb-2">{listing.yearOfPurchase || listing.year} • {listing.condition}</Text>
+
         
         <View className="flex-row justify-between items-end mt-2">
           <View>
@@ -59,7 +80,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
               <Text className="text-gold text-xs font-semibold mt-1">Make an Offer</Text>
             )}
           </View>
-          <Text className="text-gray-400 text-xs">{listing.city}, {listing.state}</Text>
+          <View className="flex-row items-center">
+            <Ionicons name="location-outline" size={14} color="#9CA3AF" />
+            <Text className="text-gray-400 text-xs ml-1">{[listing.city, listing.state].filter(Boolean).join(', ')}</Text>
+          </View>
         </View>
 
         {isMyListing && (

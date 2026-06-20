@@ -6,6 +6,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../../types/navigation';
 import { useListingsStore } from '../../store/listingsStore';
 import { ListingCard } from '../../components/ListingCard';
+import { MarkSoldModal } from '../../components/MarkSoldModal';
+import { Listing } from '../../types/listing';
 import { Button } from '../../components/Button';
 import { TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +15,9 @@ import { useTranslation } from 'react-i18next';
 export const MyListingsScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<MainStackParamList>>();
   const { myListings, loadingMy, fetchMyListings, updateListingStatus, deleteListing } = useListingsStore();
-  const [activeTab, setActiveTab] = useState<'active' | 'pending' | 'sold'>('active');
+  const [activeTab, setActiveTab] = useState<'active' | 'sold'>('active');
+  const [soldModalVisible, setSoldModalVisible] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const { t } = useTranslation();
 
   React.useEffect(() => {
@@ -34,7 +38,7 @@ export const MyListingsScreen: React.FC = () => {
       </View>
 
       <View className="flex-row border-b border-gray-200 mb-4 px-4">
-        {['active', 'pending', 'sold'].map((tab) => (
+        {['active', 'sold'].map((tab) => (
           <TouchableOpacity 
             key={tab}
             onPress={() => setActiveTab(tab as any)}
@@ -57,7 +61,10 @@ export const MyListingsScreen: React.FC = () => {
             isMyListing
             onPress={() => navigation.navigate('ListingDetail', { id: item.id })}
             onEdit={() => navigation.navigate('EditListing', { id: item.id })}
-            onMarkSold={() => updateListingStatus(item.id, 'sold')}
+            onMarkSold={() => {
+              setSelectedListing(item);
+              setSoldModalVisible(true);
+            }}
             onDelete={() => deleteListing(item.id)}
           />
         )}
@@ -68,6 +75,17 @@ export const MyListingsScreen: React.FC = () => {
             </Text>
           </View>
         )}
+      />
+      <MarkSoldModal
+        visible={soldModalVisible}
+        listing={selectedListing}
+        onClose={() => setSoldModalVisible(false)}
+        onConfirm={async (buyerId) => {
+          if (selectedListing) {
+            await updateListingStatus(selectedListing.id, 'sold', buyerId);
+          }
+          setSoldModalVisible(false);
+        }}
       />
     </SafeAreaView>
   );

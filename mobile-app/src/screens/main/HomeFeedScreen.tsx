@@ -10,6 +10,8 @@ import { useDataStore } from '../../store/useDataStore';
 import { useAuthStore } from '../../store/authStore';
 import { useCategoriesStore } from '../../store/categoriesStore';
 import { ListingCard } from '../../components/ListingCard';
+import { MarkSoldModal } from '../../components/MarkSoldModal';
+import { Listing } from '../../types/listing';
 import { Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
@@ -23,6 +25,8 @@ export const HomeFeedScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
   
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [soldModalVisible, setSoldModalVisible] = useState(false);
+  const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const unreadCount = notifications.filter(n => !n.isRead).length;
   
   React.useEffect(() => {
@@ -35,13 +39,18 @@ export const HomeFeedScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredListings = listings.filter(l => {
-    const matchesCategory = activeCategory === 'All' || l.category === activeCategory;
+    const categoryName = typeof l.category === 'object' ? (l.category as any)?.name : l.category;
+    const matchesCategory = activeCategory === 'All' || categoryName === activeCategory;
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || 
-      (l.category && l.category.toLowerCase().includes(searchLower)) ||
+      (categoryName && typeof categoryName === 'string' && categoryName.toLowerCase().includes(searchLower)) ||
+      (l.title && l.title.toLowerCase().includes(searchLower)) ||
       (l.brand && l.brand.toLowerCase().includes(searchLower)) ||
+      (l.model && l.model.toLowerCase().includes(searchLower)) ||
+      (l.description && l.description.toLowerCase().includes(searchLower)) ||
       (l.city && l.city.toLowerCase().includes(searchLower)) ||
-      (l.state && l.state.toLowerCase().includes(searchLower));
+      (l.state && l.state.toLowerCase().includes(searchLower)) ||
+      (l.country && l.country.toLowerCase().includes(searchLower));
       
     return matchesCategory && matchesSearch;
   });
@@ -99,9 +108,9 @@ export const HomeFeedScreen: React.FC = () => {
           {/* 'All' chip */}
           <TouchableOpacity 
             onPress={() => setActiveCategory('All')}
-            className={`mr-3 px-4 py-2 rounded-full ${activeCategory === 'All' ? 'bg-gold' : 'bg-gray-100'}`}
+            className={`mr-3 px-4 py-2 rounded-full flex-row items-center justify-center ${activeCategory === 'All' ? 'bg-gold' : 'bg-gray-100'}`}
           >
-            <Text className={`font-semibold ${activeCategory === 'All' ? 'text-white' : 'text-gray-600'}`}>
+            <Text numberOfLines={1} className={`font-semibold text-center ${activeCategory === 'All' ? 'text-white' : 'text-gray-600'}`}>
               {t('categories.all')}
             </Text>
           </TouchableOpacity>
@@ -109,10 +118,24 @@ export const HomeFeedScreen: React.FC = () => {
             <TouchableOpacity 
               key={cat.id}
               onPress={() => setActiveCategory(cat.name)}
-              className={`mr-3 px-4 py-2 rounded-full ${activeCategory === cat.name ? 'bg-gold' : 'bg-gray-100'}`}
+              className={`mr-3 px-4 py-2 rounded-full flex-row items-center justify-center ${activeCategory === cat.name ? 'bg-gold' : 'bg-gray-100'}`}
             >
-              <Text className={`font-semibold ${activeCategory === cat.name ? 'text-white' : 'text-gray-600'}`}>
-                {cat.name}
+              <Text numberOfLines={1} className={`font-semibold text-center ${activeCategory === cat.name ? 'text-white' : 'text-gray-600'}`}>
+                {(() => {
+                  const staticMap: any = {
+                    'XRF Machines': t('categories.xrf'),
+                    'Laser Marking': t('categories.laser'),
+                    'Micro Balances': t('categories.micro'),
+                    'Fire Assay Equipment': t('categories.fireAssay')
+                  };
+                  if (staticMap[cat.name] && staticMap[cat.name] !== cat.name) {
+                    return staticMap[cat.name];
+                  }
+                  const lang = i18n.language;
+                  if (lang === 'hi' && cat.nameHi) return cat.nameHi;
+                  if (lang === 'gu' && cat.nameGu) return cat.nameGu;
+                  return cat.name;
+                })()}
               </Text>
             </TouchableOpacity>
           ))}
@@ -140,9 +163,13 @@ export const HomeFeedScreen: React.FC = () => {
           renderItem={({ item }) => (
             <ListingCard 
               listing={item} 
-              isMyListing={user?.uid === item.userId}
+              isMyListing={user && (user.id || user.uid) === (item.sellerId || item.userId)}
               onPress={() => navigation.navigate('ListingDetail', { id: item.id })}
               onEdit={() => navigation.navigate('EditListing', { id: item.id })}
+              onMarkSold={() => {
+                setSelectedListing(item);
+                setSoldModalVisible(true);
+              }}
               onDelete={() => {
                 Alert.alert('Delete Listing', 'Are you sure you want to permanently delete this equipment?', [
                   { text: 'Cancel', style: 'cancel' },
@@ -204,6 +231,22 @@ export const HomeFeedScreen: React.FC = () => {
           </View>
         </Pressable>
       </Modal>
+
+      <MarkSoldModal
+        visible={soldModalVisible}
+        listing={selectedListing}
+        onClose={() => setSoldModalVisible(false)}
+        onConfirm={async (buyerId) => {
+          if (selectedListing) {
+            try {
+              await useListingsStore.getState().updateListingStatus(selectedListing.id, 'sold', buyerId);
+            } catch (error) {
+              console.error('Failed to mark sold', error);
+            }
+          }
+          setSoldModalVisible(false);
+        }}
+      />
     </SafeAreaView>
   );
 };

@@ -1,14 +1,13 @@
 import { create } from 'zustand';
-import { db } from '../utils/firebase';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { useNotificationsStore } from './notificationsStore';
-import { useUsersStore } from './usersStore';
+import { useAuthStore } from './authStore';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export interface Listing {
   id: string;
   title: string;
   description: string;
-  category: 'XRF Machines' | 'Laser Marking' | 'Micro Balances' | 'Fire Assay Equipment';
+  category: string;
   price: number | null;
   yearOfPurchase: number;
   yearsUsed: number;
@@ -17,8 +16,10 @@ export interface Listing {
   contactNumber: string;
   pricingType: 'fixed' | 'negotiable';
   brand: string;
+  model?: string;
   city: string;
   state: string;
+  country?: string;
   sellerId: string;
   sellerName: string;
   status: 'approved' | 'pending' | 'rejected' | 'sold';
@@ -39,39 +40,28 @@ interface ListingsState {
   deleteListing: (id: string) => Promise<void>;
 }
 
-let unsubscribe: (() => void) | null = null;
-// Track listing IDs we've already seen so we only notify on truly new ones
-const knownListingIds: Set<string> = new Set(
-  JSON.parse(localStorage.getItem('mx_known_listing_ids') || '[]')
-);
-
-export const useListingsStore = create<ListingsState>((set) => ({
+export const useListingsStore = create<ListingsState>((set, get) => ({
   listings: [],
-  loading: true,
-  subscribeToListings: () => {
-    if (unsubscribe) return;
+  loading: false,
+  subscribeToListings: async () => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    
     set({ loading: true });
 
-    // Listen to ALL listings (no filter) so admin sees every status
-    unsubscribe = onSnapshot(collection(db, 'listings'), (snapshot) => {
-      const listingsList: Listing[] = [];
-      const newListingNotifications: { title: string; seller: string; id: string }[] = [];
+    try {
+      // Fetch all listings regardless of status since we are admin
+      const response = await fetch(`${API_URL}/api/listings?status=all`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!response.ok) throw new Error('Failed to fetch listings');
+      const data = await response.json();
 
-      snapshot.forEach((d) => {
-        const data = d.data();
-        const createdDate = data.createdAt
-          ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0]
+      const listingsList: Listing[] = data.map((d: any) => {
+        const createdDate = d.createdAt
+          ? new Date(d.createdAt).toISOString().split('T')[0]
           : new Date().toISOString().split('T')[0];
 
-        // Map category — the mobile app stores exact category names like 'XRF Machines'
-        const validCategories = ['XRF Machines', 'Laser Marking', 'Micro Balances', 'Fire Assay Equipment'];
-        const category = validCategories.includes(data.category) 
-          ? data.category as Listing['category']
-          : 'XRF Machines';
-
-        // Map mobile app status values to admin panel status values
-        // Mobile app uses: 'active', 'pending', 'sold'
-        // Admin panel uses: 'approved', 'pending', 'rejected', 'sold'
         const statusMap: Record<string, Listing['status']> = {
           'active': 'approved',
           'pending': 'pending',
@@ -79,133 +69,96 @@ export const useListingsStore = create<ListingsState>((set) => ({
           'rejected': 'rejected',
           'approved': 'approved',
         };
-        const status = statusMap[data.status] || 'pending';
+        const status = statusMap[d.status] || 'pending';
 
-        // Build a display title from brand + category since mobile app doesn't store a title
-        const brand = data.brand || 'Unknown Brand';
-        const title = data.title || `${brand} ${category}`;
-
-        const sellerId = data.userId || data.sellerId || '';
-        const users = useUsersStore.getState().users;
-        const user = users.find(u => u.id === sellerId);
-        let resolvedSellerName = data.sellerName || data.userName;
-        if (!resolvedSellerName || resolvedSellerName === 'Unknown') {
-          resolvedSellerName = user?.name || 'Unknown User';
-        }
-
-        listingsList.push({
+        return {
           id: d.id,
-          title,
-          description: data.description || '',
-          category,
-          price: data.price ?? null,
-          yearOfPurchase: data.yearOfPurchase || new Date().getFullYear(),
-          yearsUsed: data.yearsUsed || 0,
-          condition: data.condition || 'Good',
-          warranty: data.warranty || 'None',
-          contactNumber: data.contactNumber || data.phone || '',
-          pricingType: data.pricingType || 'negotiable',
-          brand,
-          city: data.city || '',
-          state: data.state || '',
-          sellerId,
-          sellerName: resolvedSellerName,
-          // Mobile app stores Cloudinary URLs in "photos" field
-          imageUrls: data.photos || data.imageUrls || data.images || [],
-          createdDate,
-          featured: data.featured ?? false,
+          title: d.title || 'Untitled',
+          description: d.description || '',
+          category: d.category?.name || 'Uncategorized',
+          price: d.price || 0,
+          yearOfPurchase: d.yearOfPurchase || d.year || new Date().getFullYear(),
+          yearsUsed: d.yearsUsed || 0,
+          condition: d.condition || 'Not specified',
+          warranty: d.warranty || 'None',
+          contactNumber: d.seller?.phoneNumber || '',
+          pricingType: d.pricingType || 'fixed',
+          brand: d.brand || d.title?.split(' ')[0] || '',
+          model: d.model || '',
+          city: d.city || '',
+          state: d.state || '',
+          country: d.country || '',
+          sellerId: d.sellerId || '',
+          sellerName: d.seller?.displayName || 'Unknown User',
           status,
-        });
-
-        // Check if this is a new listing we haven't seen before
-        if (!knownListingIds.has(d.id)) {
-          knownListingIds.add(d.id);
-          newListingNotifications.push({
-            title,
-            seller: resolvedSellerName,
-            id: d.id,
-          });
-        }
+          imageUrls: d.images || [],
+          createdDate,
+          featured: false
+        };
       });
 
-      // Persist known IDs
-      localStorage.setItem('mx_known_listing_ids', JSON.stringify([...knownListingIds]));
-
-      // Fire notifications for new listings
-      if (newListingNotifications.length > 0) {
-        const { addNotification } = useNotificationsStore.getState();
-        newListingNotifications.forEach((nl) => {
-          addNotification({
-            type: 'new_listing',
-            title: 'New Listing Added',
-            description: `"${nl.title}" was listed.`,
-            read: false,
-            link: '/listings',
-          });
-        });
-      }
-
       set({ listings: listingsList, loading: false });
-    }, (error) => {
-      console.error("Firestore listings connection error:", error.message);
+    } catch (error: any) {
+      console.error("Fetch listings error:", error.message);
       set({ listings: [], loading: false });
-    });
+    }
   },
-  addListing: (newListing) => set((state) => ({
+  addListing: (listing) => set((state) => ({
     listings: [
-      ...state.listings,
       {
-        ...newListing,
-        id: `LST-${200 + state.listings.length + 1}`,
+        ...listing,
+        id: `LST-${Date.now()}`,
         createdDate: new Date().toISOString().split('T')[0]
-      }
+      },
+      ...state.listings
     ]
   })),
   updateListing: (id, updates) => set((state) => ({
     listings: state.listings.map((l) => l.id === id ? { ...l, ...updates } : l)
   })),
   approveListing: async (id) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
     try {
-      const listingRef = doc(db, 'listings', id);
-      // Write 'active' back to Firestore since that's what the mobile app expects
-      await updateDoc(listingRef, { status: 'active' });
-    } catch {
+      await fetch(`${API_URL}/api/listings/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: 'active' }) // 'active' maps to 'approved'
+      });
       set((state) => ({
         listings: state.listings.map((l) => l.id === id ? { ...l, status: 'approved' } : l)
       }));
+    } catch (err) {
+      console.error(err);
     }
   },
   rejectListing: async (id) => {
-    try {
-      const listingRef = doc(db, 'listings', id);
-      await updateDoc(listingRef, { status: 'rejected' });
-    } catch {
-      set((state) => ({
-        listings: state.listings.map((l) => l.id === id ? { ...l, status: 'rejected' } : l)
-      }));
-    }
+    // Implement reject status if backend supports it, else just local map
+    set((state) => ({
+      listings: state.listings.map((l) => l.id === id ? { ...l, status: 'rejected' } : l)
+    }));
   },
   toggleFeatured: async (id) => {
-    const store = useListingsStore.getState();
-    const listing = store.listings.find((l) => l.id === id);
-    if (!listing) return;
-    const newFeatured = !listing.featured;
-    try {
-      const listingRef = doc(db, 'listings', id);
-      await updateDoc(listingRef, { featured: newFeatured });
-    } catch {
-      set((state) => ({
-        listings: state.listings.map((l) => l.id === id ? { ...l, featured: newFeatured } : l)
-      }));
-    }
+    set((state) => ({
+      listings: state.listings.map((l) => l.id === id ? { ...l, featured: !l.featured } : l)
+    }));
   },
   deleteListing: async (id) => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
     try {
-      await deleteDoc(doc(db, 'listings', id));
-    } catch {
+      await fetch(`${API_URL}/api/listings/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       set((state) => ({
         listings: state.listings.filter((l) => l.id !== id)
       }));
+    } catch (err) {
+      console.error(err);
     }
   }
 }));

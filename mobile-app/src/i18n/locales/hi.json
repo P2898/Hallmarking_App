@@ -5,45 +5,71 @@
     "edit": "संपादित करें",
     "delete": "हटाएं",
     "cancel": "रद्द करें",
-    "save": "सहेजें"
+    "save": "सहेजें",
+    "loading": "लोड हो रहा है...",
+    "success": "सफल",
+    "error": "त्रुटि",
+    "confirm": "पुष्टि करें",
+    "submit": "जमा करें",
+    "back": "वापस"
   },
   "home": {
     "title": "MachineXchange",
     "availableEquipment": "उपलब्ध उपकरण",
-    "noResults": "आपकी खोज के लिए कोई परिणाम नहीं मिला"
+    "noResults": "आपकी खोज के लिए कोई परिणाम नहीं मिला",
+    "loading": "लिस्टिंग लोड हो रही हैं..."
   },
   "categories": {
     "all": "सभी",
     "xrf": "एक्सआरएफ मशीनें",
-    "laser": "लेजर मार्किंग",
+    "laser": "लेज़र मार्किंग",
     "micro": "माइक्रो बैलेंस",
     "fireAssay": "फायर एसे उपकरण"
   },
   "listing": {
-    "makeOffer": "प्रस्ताव दें",
-    "chatWithSeller": "विक्रेता से चैट करें",
+    "makeOffer": "दाम पेश करें",
+    "chatWithSeller": "विक्रेता से बात करें",
     "description": "विवरण",
     "specifications": "विशिष्टताएँ",
     "category": "श्रेणी",
     "brand": "ब्रांड",
+    "model": "मॉडल",
     "yearOfPurchase": "खरीद का वर्ष",
+    "yearsUsed": "उपयोग के वर्ष",
     "condition": "स्थिति",
     "warranty": "वारंटी",
-    "report": "इस लिस्टिंग की रिपोर्ट करें",
-    "noDescription": "इस लिस्टिंग के लिए कोई विवरण नहीं दिया गया है। अधिक जानकारी के लिए कृपया विक्रेता से संपर्क करें।"
+    "pricingType": "मूल्य प्रकार",
+    "fixedPrice": "निश्चित मूल्य",
+    "negotiable": "मोलभाव योग्य",
+    "location": "स्थान",
+    "report": "इस लिस्टिंग की शिकायत करें",
+    "noDescription": "इस लिस्टिंग के लिए कोई विवरण नहीं दिया गया। अधिक जानकारी के लिए विक्रेता से संपर्क करें।",
+    "newListing": "नई लिस्टिंग",
+    "editListing": "लिस्टिंग संपादित करें",
+    "submitListing": "लिस्टिंग जमा करें",
+    "updateListing": "लिस्टिंग अपडेट करें",
+    "deleteListing": "लिस्टिंग हटाएं",
+    "deleteConfirm": "क्या आप वाकई इस उपकरण को स्थायी रूप से हटाना चाहते हैं?",
+    "machineLocation": "मशीन का स्थान",
+    "photos": "फ़ोटो",
+    "photosRequired": "फ़ोटो (आवश्यक)",
+    "reviewNote": "आपकी लिस्टिंग की समीक्षा एडमिन द्वारा की जाएगी। कृपया सुनिश्चित करें कि सभी विवरण सही हैं।",
+    "city": "शहर",
+    "state": "राज्य",
+    "country": "देश"
   },
   "tabs": {
     "home": "होम",
     "myListings": "मेरी लिस्टिंग",
     "chat": "चैट",
-    "profile": "प्रोफाइल"
+    "profile": "प्रोफ़ाइल"
   },
   "chat": {
     "messages": "संदेश",
     "search": "बातचीत खोजें...",
     "noMessages": "अभी तक कोई संदेश नहीं",
     "noConversations": "अभी तक कोई बातचीत नहीं",
-    "typeMessage": "एक संदेश टाइप करें..."
+    "typeMessage": "संदेश लिखें..."
   },
   "myListings": {
     "title": "मेरी लिस्टिंग",
@@ -51,16 +77,18 @@
     "active": "सक्रिय",
     "pending": "लंबित",
     "sold": "बिक गया",
-    "noListings": "કોઈ {{status}} लिस्टिंग नहीं मिली।"
+    "noListings": "कोई {{status}} लिस्टिंग नहीं मिली।"
   },
   "profile": {
     "account": "खाता: {{status}}",
     "editProfile": "प्रोफ़ाइल संपादित करें",
     "myListings": "मेरी लिस्टिंग",
-    "language": "भाषा प्राथमिकता (EN/HI/GU)",
+    "buyHistory": "खरीद इतिहास",
+    "language": "भाषा प्राथमिकता",
+    "selectLanguage": "भाषा चुनें",
     "terms": "नियम और शर्तें",
-    "support": "समर्थन कॉल करें",
+    "support": "सहायता के लिए कॉल करें",
     "deleteAccount": "खाता हटाएं",
-    "logout": "लॉग आउट"
+    "logout": "लॉग आउट करें"
   }
 }

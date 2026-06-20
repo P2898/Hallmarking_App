@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { initializeAuth, getReactNativePersistence, getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -14,10 +14,32 @@ const firebaseConfig = {
 
 console.log('Firebase Config:', firebaseConfig);
 
-export const app = initializeApp(firebaseConfig);
+let app;
+try {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+} catch (error) {
+  console.error('Error initializing Firebase App:', error);
+}
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} catch (error) {
+  console.warn('initializeAuth with persistence failed, falling back to getAuth:', error);
+  try {
+    auth = getAuth(app);
+  } catch (innerError) {
+    console.error('getAuth fallback failed:', innerError);
+  }
+}
 
-export const db = getFirestore(app);
+let db;
+try {
+  db = getFirestore(app);
+} catch (error) {
+  console.error('Error initializing Firestore:', error);
+}
+
+export { app, auth, db };

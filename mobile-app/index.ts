@@ -1,3 +1,18 @@
+import { Alert } from 'react-native';
+
+const defaultErrorHandler = ErrorUtils.getGlobalHandler();
+ErrorUtils.setGlobalHandler((error, isFatal) => {
+  if (isFatal) {
+    Alert.alert(
+      "Fatal JS Error (Please Screenshot!)",
+      `${error.name}: ${error.message}`
+    );
+  }
+  if (defaultErrorHandler) {
+    defaultErrorHandler(error, isFatal);
+  }
+});
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';
