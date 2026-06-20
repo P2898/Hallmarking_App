@@ -7,7 +7,6 @@ import {
   Eye, 
   Building,
   Mail,
-  Phone,
   MapPin,
   Calendar,
   X

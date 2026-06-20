@@ -40,7 +40,7 @@ interface ListingsState {
   deleteListing: (id: string) => Promise<void>;
 }
 
-export const useListingsStore = create<ListingsState>((set, get) => ({
+export const useListingsStore = create<ListingsState>((set) => ({
   listings: [],
   loading: false,
   subscribeToListings: async () => {

@@ -13,7 +13,7 @@ import { useUsersStore } from '../store/usersStore';
 import { useListingsStore } from '../store/listingsStore';
 
 export const Chats = () => {
-  const { chats, flagChat, resolveChat, addMessage, subscribeToChats } = useChatsStore();
+  const { chats, flagChat, resolveChat, subscribeToChats, addMessage } = useChatsStore();
   const { subscribeToUsers } = useUsersStore();
   const { subscribeToListings } = useListingsStore();
   

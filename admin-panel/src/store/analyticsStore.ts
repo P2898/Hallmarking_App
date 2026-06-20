@@ -65,13 +65,6 @@ interface AnalyticsState {
   getStateDistribution: () => StateDistributionData[];
 }
 
-const CATEGORY_COLORS: Record<string, string> = {
-  'XRF Machines': '#D4AF37',
-  'Laser Marking': '#1A1A1A',
-  'Micro Balances': '#4B5563',
-  'Fire Assay Equipment': '#9CA3AF',
-};
-
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({

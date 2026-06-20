@@ -7,7 +7,7 @@ export interface User {
   id: string;
   name: string;
   companyName: string;
-  role: 'jeweller' | 'hallmarking_centre' | 'refiner' | 'admin';
+  role: 'jeweller' | 'hallmarking_centre' | 'refiner' | 'admin' | string;
   phone: string;
   email: string;
   city: string;
@@ -27,7 +27,7 @@ interface UsersState {
   deleteUser: (id: string) => Promise<void>;
 }
 
-export const useUsersStore = create<UsersState>((set, get) => ({
+export const useUsersStore = create<UsersState>((set) => ({
   users: [],
   loading: false,
   subscribeToUsers: async () => {

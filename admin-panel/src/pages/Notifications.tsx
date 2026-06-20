@@ -6,12 +6,12 @@ import {
   ExternalLink,
   PackagePlus
 } from 'lucide-react';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useNotificationsStore, type AdminNotification } from '../store/notificationsStore';
 
 export const Notifications = () => {
-  const { notifications, fetchNotifications, markNotificationRead, markAllNotificationsRead, loading } = useNotificationsStore();
+  const { notifications, fetchNotifications, markNotificationRead, markAllNotificationsRead } = useNotificationsStore();
 
   useEffect(() => {
     fetchNotifications();

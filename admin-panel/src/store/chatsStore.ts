@@ -31,9 +31,10 @@ interface ChatsState {
   subscribeToChats: () => void;
   flagChat: (id: string) => Promise<void>;
   resolveChat: (id: string) => Promise<void>;
+  addMessage: (chatId: string, message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
 }
 
-export const useChatsStore = create<ChatsState>((set, get) => ({
+export const useChatsStore = create<ChatsState>((set) => ({
   chats: [],
   loading: false,
 
@@ -88,6 +89,15 @@ export const useChatsStore = create<ChatsState>((set, get) => ({
     // Add logic later if backend supports chat resolution
     set((state) => ({
       chats: state.chats.map((c) => c.id === id ? { ...c, status: 'resolved' } : c)
+    }));
+  },
+
+  addMessage: (chatId, message) => {
+    set((state) => ({
+      chats: state.chats.map(c => c.id === chatId ? {
+        ...c,
+        messages: [...c.messages, { ...message, id: Math.random().toString(), timestamp: new Date().toLocaleTimeString() }]
+      } : c)
     }));
   },
 }));

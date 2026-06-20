@@ -41,7 +41,7 @@ export const Dashboard = () => {
 
   // Use the accurate stats directly from the backend rather than computing locally
   const totalUsers = summaryStats.totalUsers || users.length;
-  const activeListings = summaryStats.activeListings || listings.filter(l => l.status === 'active').length;
+  const activeListings = summaryStats.activeListings || listings.filter(l => l.status === 'approved').length;
   const pendingReports = summaryStats.pendingListings || 0;
 
 
