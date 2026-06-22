@@ -88,12 +88,26 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       socket.on('connect', () => {
         console.log('[Socket] Connected, joining user room:', user.id);
         socket?.emit('joinUser', user.id);
+        // Re-join any active chat room on reconnect
+        const currentMessages = get().messages;
+        Object.keys(currentMessages).forEach(cId => {
+          socket?.emit('joinChat', cId);
+        });
       });
 
       socket.on('chatUpdate', (updatedChat: Chat) => {
         set((state) => {
+          const existing = state.chats.find((c) => c.id === updatedChat.id);
+          // Merge: preserve buyer/seller/listing from existing chat if the update is missing them
+          const merged: Chat = {
+            ...existing,
+            ...updatedChat,
+            buyer: updatedChat.buyer ?? existing?.buyer,
+            seller: updatedChat.seller ?? existing?.seller,
+            listing: updatedChat.listing ?? existing?.listing,
+          };
           const filtered = state.chats.filter((c) => c.id !== updatedChat.id);
-          return { chats: [updatedChat, ...filtered] };
+          return { chats: [merged, ...filtered] };
         });
       });
     }
@@ -129,9 +143,12 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     const socket = get().socket;
     if (socket) {
       socket.emit('joinChat', chatId);
-      
-      // Listen for new messages
-      socket.on('message', (message: Message) => {
+
+      // Use a named handler so we can remove exactly this listener later
+      // (socket.off('message') without a handler removes ALL listeners!)
+      const messageHandler = (message: Message) => {
+        // Only handle messages for this specific chat
+        if (message.chatId && message.chatId !== chatId) return;
         set((state) => {
           const currentMsgs = state.messages[chatId] || [];
           // Avoid duplicate messages
@@ -143,45 +160,64 @@ export const useChatStore = create<ChatStore>((set, get) => ({
             },
           };
         });
-      });
+      };
+
+      // Remove any previous listener for this event before adding a new one
+      socket.off('message', messageHandler);
+      socket.on('message', messageHandler);
+
+      const loadMessages = async () => {
+        try {
+          const response = await fetch(`${API_URL}/api/chats/${chatId}/messages`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (response.ok) {
+            const msgs = await response.json();
+            set((state) => {
+              const userId = useAuthStore.getState().user?.id;
+              const updatedChats = state.chats.map(c => {
+                if (c.id === chatId && c.lastSenderId !== userId) {
+                  return { ...c, unreadCount: 0 };
+                }
+                return c;
+              });
+              return {
+                messages: { ...state.messages, [chatId]: msgs },
+                chats: updatedChats
+              };
+            });
+          }
+        } catch (error) {
+          console.error('[ChatStore] Fetch messages failed:', error);
+        }
+      };
+
+      loadMessages();
+
+      return () => {
+        // Remove only this specific named handler, not all message listeners
+        socket.off('message', messageHandler);
+      };
     }
 
+    // No socket yet — just load messages from REST
     const loadMessages = async () => {
       try {
         const response = await fetch(`${API_URL}/api/chats/${chatId}/messages`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
+          headers: { 'Authorization': `Bearer ${token}` },
         });
         if (response.ok) {
           const msgs = await response.json();
-          set((state) => {
-            const userId = useAuthStore.getState().user?.id;
-            const updatedChats = state.chats.map(c => {
-              if (c.id === chatId && c.lastSenderId !== userId) {
-                return { ...c, unreadCount: 0 };
-              }
-              return c;
-            });
-            
-            return {
-              messages: { ...state.messages, [chatId]: msgs },
-              chats: updatedChats
-            };
-          });
+          set((state) => ({ messages: { ...state.messages, [chatId]: msgs } }));
         }
       } catch (error) {
         console.error('[ChatStore] Fetch messages failed:', error);
       }
     };
-
     loadMessages();
-
-    return () => {
-      if (socket) {
-        socket.off('message');
-      }
-    };
+    return () => {};
   },
 
   fetchOffers: (chatId) => {

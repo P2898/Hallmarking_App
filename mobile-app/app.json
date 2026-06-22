@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "MachineXchange Preview",
+    "name": "MachineXchange",
     "slug": "machinexchange-preview",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -31,7 +31,16 @@
     "plugins": [
       "expo-image-picker",
       "expo-location",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "expo-font"
     ],
     "extra": {
       "eas": {

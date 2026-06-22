@@ -60,13 +60,12 @@ router.post('/', authMiddleware_1.authenticateToken, async (req, res) => {
         if (buyerId === sellerId) {
             return res.status(400).json({ error: 'You cannot start a chat with yourself' });
         }
-        // Check if chat already exists
+        // Check if chat already exists between these two users (regardless of listing)
         let chat = await models_1.Chat.findOne({
             where: {
-                listingId,
                 [sequelize_1.Op.or]: [
                     { buyerId, sellerId },
-                    { buyerId: sellerId, sellerId: buyerId } // Handle case where roles might be flipped in a different transaction
+                    { buyerId: sellerId, sellerId: buyerId } // Handle case where roles might be flipped
                 ]
             },
             include: [
@@ -153,9 +152,17 @@ router.post('/:chatId/messages', authMiddleware_1.authenticateToken, async (req,
         const io = req.app.get('io');
         if (io) {
             io.to(chatId).emit('message', message);
+            // Refetch the full chat WITH associations before emitting, so buyer/seller/listing are included
+            const fullChat = await models_1.Chat.findByPk(chatId, {
+                include: [
+                    { model: models_1.User, as: 'buyer', attributes: ['id', 'email', 'displayName', 'photoURL'] },
+                    { model: models_1.User, as: 'seller', attributes: ['id', 'email', 'displayName', 'photoURL'] },
+                    { model: models_1.Listing, as: 'listing', attributes: ['id', 'title', 'price', 'images'] },
+                ],
+            });
             // Emit chat update to both parties for their inbox
-            io.to(`user-${chat.buyerId}`).emit('chatUpdate', chat);
-            io.to(`user-${chat.sellerId}`).emit('chatUpdate', chat);
+            io.to(`user-${chat.buyerId}`).emit('chatUpdate', fullChat);
+            io.to(`user-${chat.sellerId}`).emit('chatUpdate', fullChat);
         }
         res.status(201).json(message);
     }

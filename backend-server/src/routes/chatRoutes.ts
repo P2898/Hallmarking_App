@@ -67,13 +67,12 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res: Respo
       return res.status(400).json({ error: 'You cannot start a chat with yourself' });
     }
 
-    // Check if chat already exists
+    // Check if chat already exists between these two users (regardless of listing)
     let chat = await Chat.findOne({
       where: {
-        listingId,
         [Op.or]: [
           { buyerId, sellerId },
-          { buyerId: sellerId, sellerId: buyerId } // Handle case where roles might be flipped in a different transaction
+          { buyerId: sellerId, sellerId: buyerId } // Handle case where roles might be flipped
         ]
       },
       include: [
@@ -172,9 +171,17 @@ router.post('/:chatId/messages', authenticateToken, async (req: AuthenticatedReq
     const io = req.app.get('io');
     if (io) {
       io.to(chatId).emit('message', message);
+      // Refetch the full chat WITH associations before emitting, so buyer/seller/listing are included
+      const fullChat = await Chat.findByPk(chatId, {
+        include: [
+          { model: User, as: 'buyer', attributes: ['id', 'email', 'displayName', 'photoURL'] },
+          { model: User, as: 'seller', attributes: ['id', 'email', 'displayName', 'photoURL'] },
+          { model: Listing, as: 'listing', attributes: ['id', 'title', 'price', 'images'] },
+        ],
+      });
       // Emit chat update to both parties for their inbox
-      io.to(`user-${chat.buyerId}`).emit('chatUpdate', chat);
-      io.to(`user-${chat.sellerId}`).emit('chatUpdate', chat);
+      io.to(`user-${chat.buyerId}`).emit('chatUpdate', fullChat);
+      io.to(`user-${chat.sellerId}`).emit('chatUpdate', fullChat);
     }
 
     res.status(201).json(message);

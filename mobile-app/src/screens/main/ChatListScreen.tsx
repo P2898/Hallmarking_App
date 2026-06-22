@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { MainStackParamList } from '../../types/navigation';
 import { useChatStore } from '../../store/chatStore';
@@ -15,23 +15,32 @@ export const ChatListScreen: React.FC = () => {
   const { user } = useAuthStore();
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const isFocused = useIsFocused();
 
+  // Re-fetch every time the user navigates to this tab
   React.useEffect(() => {
-    const unsubscribe = fetchChats();
-    return () => unsubscribe();
-  }, [fetchChats]);
+    if (isFocused) {
+      const unsubscribe = fetchChats();
+      return () => unsubscribe();
+    }
+  }, [isFocused, fetchChats]);
 
   const filteredChats = (() => {
     const seenUsers = new Set<string>();
     return chats.filter(c => {
+      // Determine the exact ID of the other participant from the raw chat data
+      const otherUserId = c.buyerId === user?.id ? c.sellerId : c.buyerId;
+
+      // Ensure we only show one chat per other person
+      if (otherUserId) {
+        if (seenUsers.has(otherUserId)) return false;
+        seenUsers.add(otherUserId);
+      }
+
+      // Apply search filter using the populated data
+      if (!search) return true;
       const otherUser = c.buyerId === user?.id ? c.seller : c.buyer;
-      if (!otherUser) return false;
-
-      // Group by user so we only show the latest chat per person
-      if (seenUsers.has(otherUser.id)) return false;
-      seenUsers.add(otherUser.id);
-
-      const displayName = otherUser.displayName || 'User';
+      const displayName = otherUser?.displayName || '';
       const nameMatch = displayName.toLowerCase().includes(search.toLowerCase());
       const listingTitle = c.listing?.title || '';
       const listingMatch = listingTitle.toLowerCase().includes(search.toLowerCase());
