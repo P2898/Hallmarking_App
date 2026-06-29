@@ -88,12 +88,12 @@ export const HomeFeedScreen: React.FC = () => {
       <View className="mx-4 flex-row items-center bg-gray-100 rounded-xl px-4 min-h-[48px] mb-4">
         <Ionicons name="search" size={20} color="#9CA3AF" />
         <TextInput 
-          className="flex-1 ml-2 text-dark py-3"
+          className="flex-1 ml-2 py-3"
+          style={{ color: '#1A1A1A', includeFontPadding: false, textAlignVertical: 'center' }}
           placeholder={t('common.search')}
           placeholderTextColor="#9CA3AF"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          style={{ includeFontPadding: false, textAlignVertical: 'center' }}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')} className="p-2">

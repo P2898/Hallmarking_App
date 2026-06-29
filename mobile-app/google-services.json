@@ -7,6 +7,25 @@
   "client": [
     {
       "client_info": {
+        "mobilesdk_app_id": "1:427576221201:android:ce039e4156107aece35bb0",
+        "android_client_info": {
+          "package_name": "com.machinexchange.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD6vgh4TGU6EgQkjsEZzW8qeBDdHww1J8A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
         "mobilesdk_app_id": "1:427576221201:android:325a992392c45079e35bb0",
         "android_client_info": {
           "package_name": "com.p2898.machinexchange.preview"

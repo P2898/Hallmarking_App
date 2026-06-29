@@ -92,7 +92,8 @@ export const IndividualChatScreen: React.FC = () => {
 
 
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80} 
         className="flex-1"
       >
         <FlatList
@@ -119,7 +120,8 @@ export const IndividualChatScreen: React.FC = () => {
         <View className="flex-row items-center bg-white p-3 border-t border-gray-100">
           <View className="flex-1 flex-row items-center bg-gray-100 rounded-full px-4 min-h-[44px]">
             <TextInput
-              className="flex-1 text-dark py-2"
+              className="flex-1 py-2"
+              style={{ color: '#1A1A1A' }}
               placeholder={t('chat.typeMessage')}
               placeholderTextColor="#9CA3AF"
               multiline

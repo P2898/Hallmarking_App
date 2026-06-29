@@ -56,8 +56,10 @@ export const ChatListScreen: React.FC = () => {
         <View className="flex-row items-center bg-gray-100 rounded-xl px-4 py-2">
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput 
-            placeholder={t('chat.search')} 
-            className="flex-1 ml-2 text-dark h-10"
+            className="flex-1 ml-2 py-3"
+            style={{ color: '#1A1A1A', includeFontPadding: false, textAlignVertical: 'center' }}
+            placeholder={t('chat.search')}
+            placeholderTextColor="#9CA3AF"
             value={search}
             onChangeText={setSearch}
           />
