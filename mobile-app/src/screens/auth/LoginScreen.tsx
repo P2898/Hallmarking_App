@@ -8,6 +8,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { useAuthStore } from '../../store/authStore';
 import { Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Login'>;
 
@@ -18,6 +19,7 @@ export const LoginScreen: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) return;
@@ -58,10 +60,15 @@ export const LoginScreen: React.FC = () => {
             />
             <Input 
               placeholder="Password" 
-              secureTextEntry 
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               value={password}
               onChangeText={setPassword}
+              rightIcon={
+                <TouchableOpacity onPress={() => setShowPassword(prev => !prev)}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              }
             />
             
             <TouchableOpacity className="self-end mt-1" onPress={() => navigation.navigate('ForgotPassword')}>

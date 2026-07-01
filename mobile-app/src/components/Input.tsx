@@ -5,9 +5,10 @@ interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
   leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
-export const Input: React.FC<InputProps> = ({ label, error, leftIcon, className = '', ...props }) => {
+export const Input: React.FC<InputProps> = ({ label, error, leftIcon, rightIcon, className = '', ...props }) => {
   return (
     <View className="w-full mb-4">
       {label && <Text className="text-dark font-semibold mb-2">{label}</Text>}
@@ -18,6 +19,7 @@ export const Input: React.FC<InputProps> = ({ label, error, leftIcon, className 
           placeholderTextColor="#9CA3AF"
           {...props}
         />
+        {rightIcon && <View className="ml-2">{rightIcon}</View>}
       </View>
       {error && <Text className="text-red-500 text-sm mt-1">{error}</Text>}
     </View>

@@ -6,6 +6,7 @@ import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { useAuthStore } from '../../store/authStore';
 import { Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -22,6 +23,8 @@ export const RegisterScreen: React.FC = () => {
     state: ''
   });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const userTypes = ['Hallmarking Centre', 'Jeweller', 'Refiner', 'Assayer'];
 
@@ -123,17 +126,27 @@ export const RegisterScreen: React.FC = () => {
             />
             <Input 
               placeholder="Password (min 8 characters)" 
-              secureTextEntry 
+              secureTextEntry={!showPassword}
               autoCapitalize="none"
               value={formData.password}
               onChangeText={(text) => handleChange('password', text)}
+              rightIcon={
+                <TouchableOpacity onPress={() => setShowPassword(prev => !prev)}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              }
             />
             <Input 
               placeholder="Confirm Password" 
-              secureTextEntry 
+              secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
               value={formData.confirmPassword}
               onChangeText={(text) => handleChange('confirmPassword', text)}
+              rightIcon={
+                <TouchableOpacity onPress={() => setShowConfirmPassword(prev => !prev)}>
+                  <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color="#9CA3AF" />
+                </TouchableOpacity>
+              }
             />
           </View>
 
