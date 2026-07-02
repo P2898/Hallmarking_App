@@ -25,6 +25,7 @@ export const HomeFeedScreen: React.FC = () => {
   const { t, i18n } = useTranslation();
   
   const [langModalVisible, setLangModalVisible] = useState(false);
+  const [catDropdownVisible, setCatDropdownVisible] = useState(false);
   const [soldModalVisible, setSoldModalVisible] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -102,45 +103,69 @@ export const HomeFeedScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Categories */}
-      <View className="mb-4">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {/* 'All' chip */}
-          <TouchableOpacity 
-            onPress={() => setActiveCategory('All')}
-            className={`mr-3 px-4 py-2 rounded-full flex-row items-center justify-center ${activeCategory === 'All' ? 'bg-gold' : 'bg-gray-100'}`}
-          >
-            <Text numberOfLines={1} className={`font-semibold text-center ${activeCategory === 'All' ? 'text-white' : 'text-gray-600'}`}>
-              {t('categories.all')}
-            </Text>
-          </TouchableOpacity>
-          {categories.map((cat) => (
-            <TouchableOpacity 
-              key={cat.id}
-              onPress={() => setActiveCategory(cat.name)}
-              className={`mr-3 px-4 py-2 rounded-full flex-row items-center justify-center ${activeCategory === cat.name ? 'bg-gold' : 'bg-gray-100'}`}
-            >
-              <Text numberOfLines={1} className={`font-semibold text-center ${activeCategory === cat.name ? 'text-white' : 'text-gray-600'}`}>
-                {(() => {
-                  const staticMap: any = {
-                    'XRF Machines': t('categories.xrf'),
-                    'Laser Marking': t('categories.laser'),
-                    'Micro Balances': t('categories.micro'),
-                    'Fire Assay Equipment': t('categories.fireAssay')
-                  };
-                  if (staticMap[cat.name] && staticMap[cat.name] !== cat.name) {
-                    return staticMap[cat.name];
-                  }
-                  const lang = i18n.language;
-                  if (lang === 'hi' && cat.nameHi) return cat.nameHi;
-                  if (lang === 'gu' && cat.nameGu) return cat.nameGu;
-                  return cat.name;
-                })()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+      {/* Category Dropdown */}
+      <View className="mx-4 mb-4">
+        <TouchableOpacity
+          onPress={() => setCatDropdownVisible(true)}
+          className="flex-row items-center justify-between bg-gray-100 rounded-xl px-4 min-h-[48px]"
+        >
+          <Text style={{ color: '#1A1A1A' }} className="font-semibold text-base">
+            {activeCategory === 'All' ? t('categories.all') : (() => {
+              const cat = categories.find(c => c.name === activeCategory);
+              if (!cat) return activeCategory;
+              const staticMap: any = {
+                'XRF Machines': t('categories.xrf'),
+                'Laser Marking': t('categories.laser'),
+                'Micro Balances': t('categories.micro'),
+                'Fire Assay Equipment': t('categories.fireAssay')
+              };
+              if (staticMap[cat.name] && staticMap[cat.name] !== cat.name) return staticMap[cat.name];
+              const lang = i18n.language;
+              if (lang === 'hi' && cat.nameHi) return cat.nameHi;
+              if (lang === 'gu' && cat.nameGu) return cat.nameGu;
+              return cat.name;
+            })()}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
+        </TouchableOpacity>
       </View>
+
+      {/* Category Dropdown Modal */}
+      <Modal visible={catDropdownVisible} transparent animationType="fade" onRequestClose={() => setCatDropdownVisible(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setCatDropdownVisible(false)}>
+          <View className="bg-white w-4/5 rounded-2xl p-4 shadow-lg">
+            <Text className="text-lg font-bold text-dark mb-4 text-center">{t('categories.all')}</Text>
+            {/* All option */}
+            <TouchableOpacity
+              className={`p-4 rounded-xl mb-2 ${activeCategory === 'All' ? 'bg-gold/10 border border-gold' : 'bg-gray-50'}`}
+              onPress={() => { setActiveCategory('All'); setCatDropdownVisible(false); }}
+            >
+              <Text className={`text-center font-bold ${activeCategory === 'All' ? 'text-gold' : 'text-dark'}`}>{t('categories.all')}</Text>
+            </TouchableOpacity>
+            {categories.map((cat) => {
+              const staticMap: any = {
+                'XRF Machines': t('categories.xrf'),
+                'Laser Marking': t('categories.laser'),
+                'Micro Balances': t('categories.micro'),
+                'Fire Assay Equipment': t('categories.fireAssay')
+              };
+              let label = cat.name;
+              if (staticMap[cat.name] && staticMap[cat.name] !== cat.name) label = staticMap[cat.name];
+              else if (i18n.language === 'hi' && cat.nameHi) label = cat.nameHi;
+              else if (i18n.language === 'gu' && cat.nameGu) label = cat.nameGu;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  className={`p-4 rounded-xl mb-2 ${activeCategory === cat.name ? 'bg-gold/10 border border-gold' : 'bg-gray-50'}`}
+                  onPress={() => { setActiveCategory(cat.name); setCatDropdownVisible(false); }}
+                >
+                  <Text className={`text-center font-bold ${activeCategory === cat.name ? 'text-gold' : 'text-dark'}`}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Pressable>
+      </Modal>
 
       {/* Feed */}
       <View className="flex-1 px-4">

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -22,6 +22,7 @@ export const CreateListingScreen: React.FC = () => {
   
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [catDropdownVisible, setCatDropdownVisible] = useState(false);
 
   const [formData, setFormData] = useState({
     category: '',
@@ -122,20 +123,34 @@ export const CreateListingScreen: React.FC = () => {
           <View className="mb-6 gap-y-4">
             <View>
               <Text className="text-gray-600 mb-2 font-medium ml-1">Category</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-2">
-                {CATEGORIES.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={() => setFormData(prev => ({ ...prev, category: cat }))}
-                    className={`px-4 py-2 rounded-full border mr-2 ${formData.category === cat ? 'bg-gold border-gold' : 'border-gray-300'}`}
-                  >
-                    <Text className={formData.category === cat ? 'text-white font-bold' : 'text-gray-600'}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <TouchableOpacity
+                onPress={() => setCatDropdownVisible(true)}
+                className="flex-row items-center justify-between border border-gray-300 rounded-xl bg-white px-4 h-12"
+              >
+                <Text style={{ color: formData.category ? '#1A1A1A' : '#9CA3AF' }} className="font-medium">
+                  {formData.category || 'Select a category'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
+              </TouchableOpacity>
             </View>
+
+            {/* Category Dropdown Modal */}
+            <Modal visible={catDropdownVisible} transparent animationType="fade" onRequestClose={() => setCatDropdownVisible(false)}>
+              <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setCatDropdownVisible(false)}>
+                <View className="bg-white w-4/5 rounded-2xl p-4 shadow-lg">
+                  <Text className="text-lg font-bold text-dark mb-4 text-center">Select Category</Text>
+                  {CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat}
+                      className={`p-4 rounded-xl mb-2 ${formData.category === cat ? 'bg-gold/10 border border-gold' : 'bg-gray-50'}`}
+                      onPress={() => { setFormData(prev => ({ ...prev, category: cat })); setCatDropdownVisible(false); }}
+                    >
+                      <Text className={`text-center font-bold ${formData.category === cat ? 'text-gold' : 'text-dark'}`}>{cat}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Pressable>
+            </Modal>
 
             <Input 
               label="Brand Name"
