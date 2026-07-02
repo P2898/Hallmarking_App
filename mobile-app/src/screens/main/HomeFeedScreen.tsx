@@ -26,6 +26,7 @@ export const HomeFeedScreen: React.FC = () => {
   
   const [langModalVisible, setLangModalVisible] = useState(false);
   const [catDropdownVisible, setCatDropdownVisible] = useState(false);
+  const [cityDropdownVisible, setCityDropdownVisible] = useState(false);
   const [soldModalVisible, setSoldModalVisible] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const unreadCount = notifications.filter(n => !n.isRead).length;
@@ -37,11 +38,20 @@ export const HomeFeedScreen: React.FC = () => {
   }, [fetchActiveListings, subscribeToCategories]);
   
   const [activeCategory, setActiveCategory] = useState('All');
+  const [activeCity, setActiveCity] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Derive unique sorted cities from listings
+  const availableCities = React.useMemo(() => {
+    const citySet = new Set<string>();
+    listings.forEach(l => { if (l.city && l.city.trim()) citySet.add(l.city.trim()); });
+    return Array.from(citySet).sort();
+  }, [listings]);
 
   const filteredListings = listings.filter(l => {
     const categoryName = typeof l.category === 'object' ? (l.category as any)?.name : l.category;
     const matchesCategory = activeCategory === 'All' || categoryName === activeCategory;
+    const matchesCity = activeCity === 'All' || (l.city && l.city.trim().toLowerCase() === activeCity.toLowerCase());
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery || 
       (categoryName && typeof categoryName === 'string' && categoryName.toLowerCase().includes(searchLower)) ||
@@ -53,7 +63,7 @@ export const HomeFeedScreen: React.FC = () => {
       (l.state && l.state.toLowerCase().includes(searchLower)) ||
       (l.country && l.country.toLowerCase().includes(searchLower));
       
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesCity && matchesSearch;
   });
 
   return (
@@ -103,13 +113,14 @@ export const HomeFeedScreen: React.FC = () => {
         )}
       </View>
 
-      {/* Category Dropdown */}
-      <View className="mx-4 mb-4">
+      {/* Category + City Dropdowns Row */}
+      <View className="mx-4 mb-4 flex-row gap-x-2">
+        {/* Category Dropdown */}
         <TouchableOpacity
           onPress={() => setCatDropdownVisible(true)}
-          className="flex-row items-center justify-between bg-gray-100 rounded-xl px-4 min-h-[48px]"
+          className="flex-1 flex-row items-center justify-between bg-gray-100 rounded-xl px-3 min-h-[48px]"
         >
-          <Text style={{ color: '#1A1A1A' }} className="font-semibold text-base">
+          <Text style={{ color: '#1A1A1A' }} className="font-semibold text-sm flex-1" numberOfLines={1}>
             {activeCategory === 'All' ? t('categories.all') : (() => {
               const cat = categories.find(c => c.name === activeCategory);
               if (!cat) return activeCategory;
@@ -126,7 +137,18 @@ export const HomeFeedScreen: React.FC = () => {
               return cat.name;
             })()}
           </Text>
-          <Ionicons name="chevron-down" size={20} color="#9CA3AF" />
+          <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
+        </TouchableOpacity>
+
+        {/* City Dropdown */}
+        <TouchableOpacity
+          onPress={() => setCityDropdownVisible(true)}
+          className="flex-1 flex-row items-center justify-between bg-gray-100 rounded-xl px-3 min-h-[48px]"
+        >
+          <Text style={{ color: '#1A1A1A' }} className="font-semibold text-sm flex-1" numberOfLines={1}>
+            {activeCity === 'All' ? 'All Cities' : activeCity}
+          </Text>
+          <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
         </TouchableOpacity>
       </View>
 
@@ -134,8 +156,7 @@ export const HomeFeedScreen: React.FC = () => {
       <Modal visible={catDropdownVisible} transparent animationType="fade" onRequestClose={() => setCatDropdownVisible(false)}>
         <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setCatDropdownVisible(false)}>
           <View className="bg-white w-4/5 rounded-2xl p-4 shadow-lg">
-            <Text className="text-lg font-bold text-dark mb-4 text-center">{t('categories.all')}</Text>
-            {/* All option */}
+            <Text className="text-lg font-bold text-dark mb-4 text-center">Select Category</Text>
             <TouchableOpacity
               className={`p-4 rounded-xl mb-2 ${activeCategory === 'All' ? 'bg-gold/10 border border-gold' : 'bg-gray-50'}`}
               onPress={() => { setActiveCategory('All'); setCatDropdownVisible(false); }}
@@ -163,6 +184,35 @@ export const HomeFeedScreen: React.FC = () => {
                 </TouchableOpacity>
               );
             })}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* City Dropdown Modal */}
+      <Modal visible={cityDropdownVisible} transparent animationType="fade" onRequestClose={() => setCityDropdownVisible(false)}>
+        <Pressable className="flex-1 bg-black/50 justify-center items-center" onPress={() => setCityDropdownVisible(false)}>
+          <View className="bg-white w-4/5 rounded-2xl p-4 shadow-lg" style={{ maxHeight: '70%' }}>
+            <Text className="text-lg font-bold text-dark mb-4 text-center">Select City</Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <TouchableOpacity
+                className={`p-4 rounded-xl mb-2 ${activeCity === 'All' ? 'bg-gold/10 border border-gold' : 'bg-gray-50'}`}
+                onPress={() => { setActiveCity('All'); setCityDropdownVisible(false); }}
+              >
+                <Text className={`text-center font-bold ${activeCity === 'All' ? 'text-gold' : 'text-dark'}`}>All Cities</Text>
+              </TouchableOpacity>
+              {availableCities.map((city) => (
+                <TouchableOpacity
+                  key={city}
+                  className={`p-4 rounded-xl mb-2 ${activeCity === city ? 'bg-gold/10 border border-gold' : 'bg-gray-50'}`}
+                  onPress={() => { setActiveCity(city); setCityDropdownVisible(false); }}
+                >
+                  <Text className={`text-center font-bold ${activeCity === city ? 'text-gold' : 'text-dark'}`}>{city}</Text>
+                </TouchableOpacity>
+              ))}
+              {availableCities.length === 0 && (
+                <Text className="text-center text-gray-400 py-4">No cities found</Text>
+              )}
+            </ScrollView>
           </View>
         </Pressable>
       </Modal>
