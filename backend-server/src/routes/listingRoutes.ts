@@ -60,8 +60,12 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const { title, description, price, images, condition, location, categoryId, brand, model, yearOfPurchase, yearsUsed, warranty, pricingType, city, state, country } = req.body;
     const sellerId = req.user!.id;
 
-    if (!title || !price || !categoryId) {
+    // Price is only required for fixed price listings, not for negotiable (Make an Offer)
+    if (!title || !categoryId) {
       return res.status(400).json({ error: 'Missing required fields' });
+    }
+    if (pricingType !== 'negotiable' && !price) {
+      return res.status(400).json({ error: 'Price is required for fixed price listings' });
     }
 
     const listing = await Listing.create({
