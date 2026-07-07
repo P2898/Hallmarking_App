@@ -71,7 +71,7 @@ router.post('/', authenticateToken, async (req: AuthenticatedRequest, res) => {
     const listing = await Listing.create({
       title,
       description: description || '',
-      price,
+      price: price || 0,
       images: images || [],
       condition,
       location,
