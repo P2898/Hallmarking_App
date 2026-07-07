@@ -68,8 +68,9 @@ export const CreateListingScreen: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.brand || !formData.price || !formData.city || !formData.state) {
-      Alert.alert('Error', 'Please fill all required fields');
+    // Price is only required for Fixed Price listings, not Make an Offer
+    if (!formData.brand || (!formData.isMakeOffer && !formData.price) || !formData.city || !formData.state) {
+      Alert.alert('Error', 'Missing required fields');
       return;
     }
     if (photoUris.length === 0) {
@@ -93,7 +94,7 @@ export const CreateListingScreen: React.FC = () => {
         warranty: formData.warranty || 'None',
         description: formData.description || '',
         pricingType: formData.isMakeOffer ? 'negotiable' : 'fixed',
-        price: formData.isMakeOffer ? 0 : parseFloat(formData.price) || 0,
+        price: formData.isMakeOffer ? null : parseFloat(formData.price) || 0,
         city: formData.city,
         state: formData.state,
         country: formData.country,
@@ -164,13 +165,16 @@ export const CreateListingScreen: React.FC = () => {
               value={formData.model}
               onChangeText={(text) => setFormData(prev => ({...prev, model: text}))}
             />
-            <Input 
-              label="Expected Price (₹)"
-              placeholder="0" 
-              keyboardType="numeric"
-              value={formData.price}
-              onChangeText={(text) => setFormData(prev => ({...prev, price: text}))}
-            />
+            {/* Only show price field for Fixed Price listings */}
+            {!formData.isMakeOffer && (
+              <Input 
+                label="Expected Price (₹)"
+                placeholder="0" 
+                keyboardType="numeric"
+                value={formData.price}
+                onChangeText={(text) => setFormData(prev => ({...prev, price: text}))}
+              />
+            )}
             <View className="flex-row gap-x-2">
               <View className="flex-1">
                 <Input 
