@@ -46,7 +46,7 @@ export const MakeOfferScreen: React.FC = () => {
             <View className="flex-1">
               <Text className="text-dark font-bold mb-1" numberOfLines={1}>{listing.brand}</Text>
               <Text className="text-gray-500 text-sm mb-1">{typeof listing.category === 'object' ? listing.category?.name : listing.category}</Text>
-              <Text className="text-gold font-bold">Listed: ₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
+              <Text className="text-gold font-bold">{(listing.pricingType === 'negotiable' || listing.isMakeOffer) ? 'Make an Offer' : `Listed: ₹${(listing.price || 0).toLocaleString('en-IN')}`}</Text>
             </View>
           </View>
 
@@ -82,7 +82,7 @@ export const MakeOfferScreen: React.FC = () => {
               if (!offer || !listing) return;
               try {
                 setLoading(true);
-                const chatId = await getOrCreateChat(listing.userId, listing.id);
+                const chatId = await getOrCreateChat(listing.sellerId, listing.id);
                 await createOffer(chatId, parseFloat(offer), message);
                 Alert.alert('Success', 'Your offer has been sent to the seller!');
                 navigation.goBack();

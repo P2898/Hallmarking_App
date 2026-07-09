@@ -142,7 +142,7 @@ router.put('/:id', authenticateToken, async (req: AuthenticatedRequest, res) => 
     await listing.update({
       title,
       description,
-      price,
+      price: price || 0,
       images,
       condition,
       location,
