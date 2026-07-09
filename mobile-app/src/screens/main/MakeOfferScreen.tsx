@@ -82,7 +82,12 @@ export const MakeOfferScreen: React.FC = () => {
               if (!offer || !listing) return;
               try {
                 setLoading(true);
-                const chatId = await getOrCreateChat(listing.sellerId, listing.id);
+                const sellerIdValue = listing.sellerId || listing.seller?.id || listing.userId;
+                if (!sellerIdValue) {
+                  Alert.alert('Error', 'Could not determine the seller. Please try again.');
+                  return;
+                }
+                const chatId = await getOrCreateChat(sellerIdValue, listing.id);
                 await createOffer(chatId, parseFloat(offer), message);
                 Alert.alert('Success', 'Your offer has been sent to the seller!');
                 navigation.goBack();
