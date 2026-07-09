@@ -44,6 +44,16 @@ export const useCategoriesStore = create<CategoriesStore>((set) => ({
             order: index + 1,
             icon: d.icon,
           }));
+
+          cats.push({
+            id: 'other',
+            name: 'Other',
+            nameHi: 'अन्य',
+            nameGu: 'અન્ય',
+            color: '#D4AF37',
+            order: cats.length + 1,
+          });
+
           set({ categories: cats, loading: false });
         }
       } catch (error: any) {
