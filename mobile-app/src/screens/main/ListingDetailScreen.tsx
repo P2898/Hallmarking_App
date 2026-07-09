@@ -155,9 +155,11 @@ export const ListingDetailScreen: React.FC = () => {
             {listing.brand} {listing.model ? `- ${listing.model}` : ''}
           </Text>
 
-          
-          <Text className="text-3xl font-black text-dark mb-6">₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
-
+          {(listing.pricingType === 'negotiable' || listing.isMakeOffer) ? (
+            <Text className="text-3xl font-black text-gold mb-6">{t('listing.makeOffer', 'Make an Offer')}</Text>
+          ) : (
+            <Text className="text-3xl font-black text-dark mb-6">₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
+          )}
           {user && (user.id || user.uid) !== (listing.sellerId || listing.userId) ? (
             listing.status !== 'sold' && (
               <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, paddingVertical: 12 }} className="mb-6 -mx-4">

@@ -75,9 +75,10 @@ export const ListingCard: React.FC<ListingCardProps> = ({
         
         <View className="flex-row justify-between items-end mt-2">
           <View>
-            <Text className="text-xl font-bold text-dark">₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
-            {(listing.pricingType === 'negotiable' || listing.isMakeOffer) && !isMyListing && (
-              <Text className="text-gold text-xs font-semibold mt-1">Make an Offer</Text>
+            {(listing.pricingType === 'negotiable' || listing.isMakeOffer) ? (
+              <Text className="text-xl font-bold text-gold">{t('listing.makeOffer', 'Make an Offer')}</Text>
+            ) : (
+              <Text className="text-xl font-bold text-dark">₹{(listing.price || 0).toLocaleString('en-IN')}</Text>
             )}
           </View>
           <View className="flex-row items-center">

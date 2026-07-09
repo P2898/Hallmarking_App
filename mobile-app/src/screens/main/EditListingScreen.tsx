@@ -168,13 +168,16 @@ export const EditListingScreen: React.FC = () => {
               value={formData.model}
               onChangeText={(text) => setFormData(prev => ({...prev, model: text}))}
             />
-            <Input 
-              label="Expected Price (₹)"
-              placeholder="0" 
-              keyboardType="numeric"
-              value={formData.price}
-              onChangeText={(text) => setFormData(prev => ({...prev, price: text}))}
-            />
+            {/* Only show price field for Fixed Price listings */}
+            {!formData.isMakeOffer && (
+              <Input 
+                label="Expected Price (₹)"
+                placeholder="0" 
+                keyboardType="numeric"
+                value={formData.price}
+                onChangeText={(text) => setFormData(prev => ({...prev, price: text}))}
+              />
+            )}
             <View className="flex-row gap-x-2">
               <View className="flex-1">
                 <Input 
